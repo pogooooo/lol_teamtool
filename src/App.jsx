@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
+import html2canvas from 'html2canvas';
 
-// --- THEMES --- //
+
+// --- THEMES & TIERS --- //
+const TIER_COLORS = {
+    상: '#52B788', // Green
+    중: '#0077B6', // Blue
+    하: '#F7B801', // Yellow
+};
+
 const lightTheme = {
     body: '#F8F9FA',
     text: '#212529',
@@ -11,6 +19,9 @@ const lightTheme = {
     dragOver: '#F1F3F5',
     nameBg: '#495057',
     nameText: '#FFFFFF',
+    contextMenu: '#FFFFFF',
+    contextMenuBorder: '#DEE2E6',
+    ...TIER_COLORS
 };
 
 const darkTheme = {
@@ -22,22 +33,23 @@ const darkTheme = {
     dragOver: '#495057',
     nameBg: '#F8F9FA',
     nameText: '#212529',
+    contextMenu: '#2C3238',
+    contextMenuBorder: '#495057',
+    ...TIER_COLORS
 };
+
 
 // --- GLOBAL STYLES --- //
 const GlobalStyle = createGlobalStyle`
-    *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
         background-color: ${({ theme }) => theme.body};
         color: ${({ theme }) => theme.text};
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        transition: background-color 0.3s ease, color 0.3s ease;
+        transition: background-color 0.2s ease, color 0.2s ease;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        font-size: 16px;
     }
 `;
 
@@ -56,40 +68,43 @@ const Header = styled.header`
     position: absolute;
     top: 1.5rem;
     right: 1.5rem;
+    z-index: 10;
 `;
 
 const ThemeToggleButton = styled.button`
-    background: ${({ theme }) => theme.card};
-    color: ${({ theme }) => theme.text};
-    border: 1px solid ${({ theme }) => theme.cardBorder};
-    border-radius: 9999px;
-    padding: 0.5rem;
-    cursor: pointer;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease-in-out;
-
-    &:hover {
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+    background: ${({ theme }) => theme.card}; color: ${({ theme }) => theme.text}; border: 1px solid ${({ theme }) => theme.cardBorder}; border-radius: 9999px; padding: 0.5rem; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out;
+    &:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 `;
 
-const NamePoolContainer = styled.div`
+const TieredNamePoolContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     background: ${({ theme }) => theme.card};
     border: 1px solid ${({ theme }) => theme.cardBorder};
     border-radius: 12px;
     padding: 1rem;
-    min-height: 80px;
+`;
+
+const TierRow = styled.div`
+    min-height: 52px;
+    border-radius: 8px;
+    background-color: ${({ theme, $isDragOver }) => $isDragOver ? theme.dragOver : 'transparent'};
+    transition: background-color 0.2s ease;
+    padding: 0.5rem;
     display: flex;
     flex-wrap: wrap;
-    align-content: flex-start;
+    align-items: center;
     gap: 0.75rem;
-    transition: background-color 0.2s ease;
-    background-color: ${({ theme, $isDragOver }) => $isDragOver ? theme.dragOver : theme.card};
 `;
+
+const TierLabel = styled.h3`
+    color: ${({ tierColor }) => tierColor};
+    font-size: 1.1rem;
+    width: 40px;
+    text-align: center;
+`;
+
 
 const DraggableName = styled.div`
     background-color: ${({ theme }) => theme.nameBg};
@@ -99,12 +114,16 @@ const DraggableName = styled.div`
     border-radius: 8px;
     cursor: grab;
     user-select: none;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease;
+    transition: all 0.2s ease;
     width: ${({ $inSlot }) => ($inSlot ? '100%' : 'auto')};
+    min-width: 80px;
+    border: 3px solid transparent;
+    box-shadow: ${({ theme, tier }) => tier ? `inset 0 0 0 4px ${theme[tier]}` : '0 1px 3px rgba(0,0,0,0.1)'};
 
     &:active {
         cursor: grabbing;
@@ -118,26 +137,15 @@ const LanesContainer = styled.main`
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
 `;
 
 const Lane = styled.div`
-    display: grid;
-    grid-template-columns: 60px 1fr 40px 1fr 40px;
-    align-items: center;
-    gap: 0.75rem;
-    background: ${({ theme }) => theme.card};
-    border: 1px solid ${({ theme }) => theme.cardBorder};
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    width: 100%;
+    display: grid; grid-template-columns: 80px 1fr 40px 1fr 40px; align-items: center; gap: 1rem; background: ${({ theme }) => theme.card}; border: 1px solid ${({ theme }) => theme.cardBorder}; padding: 1rem 1.5rem; border-radius: 12px; width: 100%;
 `;
 
 const LaneLabel = styled.span`
-    font-weight: 600;
-    text-align: right;
-    margin-right: 10px;
-    color: ${({ theme }) => theme.placeholder};
+    font-weight: 600; text-align: right; color: ${({ theme }) => theme.placeholder}; font-size: 1.125rem;
 `;
 
 const NameSlot = styled.div`
@@ -151,69 +159,139 @@ const NameSlot = styled.div`
 `;
 
 const Operator = styled.div`
-    font-size: 1.5rem;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    color: ${({ theme }) => theme.placeholder};
-    text-align: center;
-    transition: color 0.2s ease;
-    &:hover {
-        color: ${({ theme }) => theme.text};
-    }
+    font-size: 1.75rem; font-weight: bold; cursor: pointer; user-select: none; color: ${({ theme }) => theme.placeholder}; text-align: center; transition: color 0.2s ease;
+    &:hover { color: ${({ theme }) => theme.text}; }
 `;
 
 const SwapButton = styled.button`
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.5rem;
-    color: ${({ theme }) => theme.placeholder};
-    transition: transform 0.2s ease, color 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-        transform: rotate(180deg);
-        color: ${({ theme }) => theme.text};
-    }
+    background: transparent; border: none; cursor: pointer; font-size: 1.5rem; color: ${({ theme }) => theme.placeholder}; transition: transform 0.2s ease, color 0.2s ease; display: flex; align-items: center; justify-content: center;
+    &:hover { transform: rotate(180deg); color: ${({ theme }) => theme.text}; }
 `;
-
 
 const InputContainer = styled.footer`
     padding-top: 1rem;
 `;
 
 const NameInput = styled.input`
-    width: 100%;
-    padding: 1rem;
-    font-size: 1.1rem;
-    border: 1px solid ${({ theme }) => theme.cardBorder};
-    background: ${({ theme }) => theme.card};
-    color: ${({ theme }) => theme.text};
-    border-radius: 12px;
-    outline: none;
-    text-align: center;
-    transition: all 0.2s ease;
+    width: 100%; padding: 1rem; font-size: 1.2rem; border: 1px solid ${({ theme }) => theme.cardBorder}; background: ${({ theme }) => theme.card}; color: ${({ theme }) => theme.text}; border-radius: 12px; outline: none; text-align: center; transition: all 0.2s ease;
+    &::placeholder { color: ${({ theme }) => theme.placeholder}; }
+    &:focus { border-color: ${({ theme }) => theme.text}; }
+`;
 
-    &::placeholder {
-        color: ${({ theme }) => theme.placeholder};
+const ContextMenuContainer = styled.div.attrs(props => ({
+    style: { top: `${props.y}px`, left: `${props.x}px` },
+}))`
+    position: absolute;
+    background-color: ${({ theme }) => theme.contextMenu};
+    border: 1px solid ${({ theme }) => theme.contextMenuBorder};
+    border-radius: 8px;
+    padding: 0.5rem;
+    z-index: 1000;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+`;
+
+const ContextMenuItem = styled.button`
+    width: 100%;
+    background: none;
+    border: none;
+    color: ${({ theme }) => theme.text};
+    padding: 0.75rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:hover {
+        background-color: ${({ theme }) => theme.dragOver};
     }
 
-    &:focus {
-        border-color: ${({ theme }) => theme.text};
+    &.delete {
+        color: #E53E3E;
     }
 `;
+
+const ColorDot = styled.span`
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: ${({ color }) => color};
+    border: 1px solid ${({ theme }) => theme.contextMenuBorder};
+`;
+
+// --- ACTION BUTTONS COMPONENT (Easy to Remove) --- //
+const ActionButtonsContainer = styled.div`
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+`;
+
+const ActionButtonStyled = styled.button`
+    background: ${({ theme }) => theme.card};
+    color: ${({ theme }) => theme.text};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+`;
+
+const ActionButtons = ({ captureRef, onRandomize }) => {
+    const [copyStatus, setCopyStatus] = useState('복사');
+    const captureAndCopy = () => {
+        if (captureRef.current) {
+            html2canvas(captureRef.current, {
+                backgroundColor: null,
+                useCORS: true,
+            }).then(canvas => {
+                canvas.toBlob(blob => {
+                    navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    setCopyStatus('완료!');
+                    setTimeout(() => setCopyStatus('복사'), 2000);
+                });
+            });
+        }
+    };
+
+    return (
+        <ActionButtonsContainer>
+            <ActionButtonStyled onClick={captureAndCopy}>
+                🖼️ 팀 화면 {copyStatus}
+            </ActionButtonStyled>
+            <ActionButtonStyled onClick={onRandomize}>
+                🎲 팀 위치 지정
+            </ActionButtonStyled>
+        </ActionButtonsContainer>
+    );
+};
+
 
 // --- APP COMPONENT --- //
 const POSITIONS = ['탑', '정글', '미드', '원딜', '서포터'];
 const OPERATORS = ['=', '>', '<'];
+const TIER_ORDER = { '상': 1, '중': 2, '하': 3, default: 99 };
 
 const App = () => {
-    const [theme, setTheme] = useState('light');
-    const [names, setNames] = useState([]);
+    const [theme, setTheme] = useState('dark');
+    const [allPlayers, setAllPlayers] = useState([]);
     const [inputValue, setInputValue] = useState('');
+    const lanesRef = useRef(null);
 
     const initialLanes = POSITIONS.reduce((acc, pos) => {
         acc[pos] = { name1: null, name2: null, operator: '=' };
@@ -222,37 +300,72 @@ const App = () => {
 
     const [lanes, setLanes] = useState(initialLanes);
     const [dragOverTarget, setDragOverTarget] = useState(null);
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetName: null });
 
-    const toggleTheme = () => {
-        setTheme(theme === 'light' ? 'dark' : 'light');
-    };
+    useEffect(() => {
+        const handleClick = () => setContextMenu({ visible: false, x: 0, y: 0, targetName: null });
+        window.addEventListener('click', handleClick);
+        return () => window.removeEventListener('click', handleClick);
+    }, []);
 
-    const handleInputChange = (e) => {
-        setInputValue(e.target.value);
-    };
+    const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
+
+    const handleInputChange = (e) => setInputValue(e.target.value);
 
     const handleInputSubmit = (e) => {
         if (e.key === 'Enter' && e.target.value.trim() !== '') {
             const newNames = e.target.value.trim().split(/\s+/);
-            setNames(newNames);
+            const newPlayers = newNames.map(name => ({ name, tier: '중' })); // 기본 등급을 '중'으로 설정
+            setAllPlayers(newPlayers);
             setLanes(initialLanes);
             setInputValue('');
         }
+    };
+
+    const handleContextMenu = (e, name) => {
+        e.preventDefault();
+        setContextMenu({ visible: true, x: e.pageX, y: e.pageY, targetName: name });
+    };
+
+    const handleDeletePlayer = (nameToDelete) => {
+        setAllPlayers(prev => prev.filter(p => p.name !== nameToDelete));
+        setLanes(prev => {
+            const newLanes = JSON.parse(JSON.stringify(prev));
+            for (const pos in newLanes) {
+                if (newLanes[pos].name1 === nameToDelete) newLanes[pos].name1 = null;
+                if (newLanes[pos].name2 === nameToDelete) newLanes[pos].name2 = null;
+            }
+            return newLanes;
+        });
+    };
+
+    const setPlayerTier = (name, tier) => {
+        setAllPlayers(prev => prev.map(p => p.name === name ? { ...p, tier } : p));
+    };
+
+    const handleRandomizeSides = () => {
+        if (Math.random() < 0.5) return;
+
+        setLanes(prevLanes => {
+            const newLanes = JSON.parse(JSON.stringify(prevLanes));
+            for (const pos in newLanes) {
+                const { name1, name2, operator } = newLanes[pos];
+                newLanes[pos] = {
+                    name1: name2,
+                    name2: name1,
+                    operator: operator === '>' ? '<' : operator === '<' ? '>' : '=',
+                };
+            }
+            return newLanes;
+        });
     };
 
     const onDragStart = (e, item) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", JSON.stringify(item));
     };
-
-    const onDragOver = (e, target) => {
-        e.preventDefault();
-        setDragOverTarget(target);
-    };
-
-    const onDragLeave = () => {
-        setDragOverTarget(null);
-    }
+    const onDragOver = (e, target) => { e.preventDefault(); setDragOverTarget(target); };
+    const onDragLeave = () => setDragOverTarget(null);
 
     const onDrop = (e, target) => {
         e.preventDefault();
@@ -260,14 +373,14 @@ const App = () => {
         const dragged = JSON.parse(e.dataTransfer.getData("text/plain"));
 
         if (target.type === 'pool') {
-            if(dragged.origin.type === 'slot') {
+            if (dragged.origin.type === 'slot') {
                 setLanes(prev => {
-                    const newLanes = {...prev};
+                    const newLanes = { ...prev };
                     newLanes[dragged.origin.position][dragged.origin.slot] = null;
                     return newLanes;
                 });
-                setNames(prev => [...prev, dragged.name]);
             }
+            setPlayerTier(dragged.name, target.tier); // 드롭된 열의 등급으로 변경
             return;
         }
 
@@ -276,101 +389,101 @@ const App = () => {
             const nameInTargetSlot = lanes[position][slot];
             const { name: draggedName, origin: draggedOrigin } = dragged;
 
-            if (draggedOrigin.type === 'slot' && draggedOrigin.position === position && draggedOrigin.slot === slot) {
-                return; // 자기 자신 위에 드롭하는 것 방지
-            }
+            if (draggedOrigin.type === 'slot' && draggedOrigin.position === position && draggedOrigin.slot === slot) return;
 
-            // Case 1: 드롭 대상 슬롯에 이미 이름이 있는 경우 (SWAP)
             if (nameInTargetSlot) {
-                if (draggedOrigin.type === 'slot') { // 슬롯 -> 슬롯
+                if (draggedOrigin.type === 'slot') {
                     setLanes(prev => {
                         const newLanes = JSON.parse(JSON.stringify(prev));
                         newLanes[position][slot] = draggedName;
                         newLanes[draggedOrigin.position][draggedOrigin.slot] = nameInTargetSlot;
                         return newLanes;
                     });
-                } else { // 풀 -> 슬롯
-                    setLanes(prev => ({...prev, [position]: {...prev[position], [slot]: draggedName }}));
-                    setNames(prev => [...prev.filter(n => n !== draggedName), nameInTargetSlot]);
+                } else {
+                    setLanes(prev => ({ ...prev, [position]: { ...prev[position], [slot]: draggedName } }));
+                    setPlayerTier(nameInTargetSlot, '중'); // 튕겨난 플레이어는 '중' 등급으로
                 }
-            }
-            // Case 2: 드롭 대상 슬롯이 비어있는 경우 (MOVE)
-            else {
-                if (draggedOrigin.type === 'slot') { // 슬롯 -> 빈 슬롯
+            } else {
+                if (draggedOrigin.type === 'slot') {
                     setLanes(prev => {
-                        const newLanes = {...prev};
+                        const newLanes = { ...prev };
                         newLanes[draggedOrigin.position][draggedOrigin.slot] = null;
                         newLanes[position][slot] = draggedName;
                         return newLanes;
                     });
-                } else { // 풀 -> 빈 슬롯
-                    setLanes(prev => ({...prev, [position]: {...prev[position], [slot]: draggedName }}));
-                    setNames(prev => prev.filter(n => n !== draggedName));
+                } else {
+                    setLanes(prev => ({ ...prev, [position]: { ...prev[position], [slot]: draggedName } }));
                 }
             }
         }
     };
 
-    const handleOperatorClick = (position, event) => {
-        event.preventDefault();
-        const currentOperator = lanes[position].operator;
-        const currentIndex = OPERATORS.indexOf(currentOperator);
-        let nextIndex;
+    const handleOperatorClick = (position, event) => { event.preventDefault(); const currentOperator = lanes[position].operator; const currentIndex = OPERATORS.indexOf(currentOperator); let nextIndex; if(event.type === 'contextmenu') { nextIndex = (currentIndex + 1) % OPERATORS.length; } else { nextIndex = (currentIndex - 1 + OPERATORS.length) % OPERATORS.length; } setLanes(prev => ({ ...prev, [position]: {...prev[position], operator: OPERATORS[nextIndex]} })); };
+    const handleSwap = (position) => { setLanes(prev => { const currentLane = prev[position]; const newOperator = currentLane.operator === '>' ? '<' : currentLane.operator === '<' ? '>' : '='; return { ...prev, [position]: { name1: currentLane.name2, name2: currentLane.name1, operator: newOperator } } }); };
 
-        if(event.type === 'contextmenu') { // 우클릭
-            nextIndex = (currentIndex + 1) % OPERATORS.length;
-        } else { // 좌클릭
-            nextIndex = (currentIndex - 1 + OPERATORS.length) % OPERATORS.length;
-        }
+    const playersInLanes = Object.values(lanes).flatMap(l => [l.name1, l.name2]).filter(Boolean);
+    const playersInPool = allPlayers.filter(p => !playersInLanes.includes(p.name));
 
-        setLanes(prev => ({
-            ...prev,
-            [position]: {...prev[position], operator: OPERATORS[nextIndex]}
-        }));
-    };
+    const findPlayer = (name) => allPlayers.find(p => p.name === name);
 
-    const handleSwap = (position) => {
-        setLanes(prev => {
-            const currentLane = prev[position];
-            const newOperator = currentLane.operator === '>' ? '<' : currentLane.operator === '<' ? '>' : '=';
-            return { ...prev, [position]: {
-                    name1: currentLane.name2,
-                    name2: currentLane.name1,
-                    operator: newOperator
-                }
-            }
-        });
+    const tierLists = {
+        '상': playersInPool.filter(p => p.tier === '상'),
+        '중': playersInPool.filter(p => p.tier === '중' || !p.tier),
+        '하': playersInPool.filter(p => p.tier === '하'),
     };
 
     return (
         <ThemeProvider theme={theme === 'light' ? lightTheme : darkTheme}>
             <GlobalStyle />
+            {contextMenu.visible && (
+                <ContextMenuContainer x={contextMenu.x} y={contextMenu.y}>
+                    {Object.keys(TIER_COLORS).map(tier => (
+                        <ContextMenuItem key={tier} onClick={() => setPlayerTier(contextMenu.targetName, tier)}>
+                            <ColorDot color={theme[tier]} /> {tier}
+                        </ContextMenuItem>
+                    ))}
+                    <ContextMenuItem onClick={() => setPlayerTier(contextMenu.targetName, null)}>
+                        <span style={{width:'12px', marginRight:'0.5rem'}}>⚪</span> 등급 취소
+                    </ContextMenuItem>
+                    <ContextMenuItem className="delete" onClick={() => handleDeletePlayer(contextMenu.targetName)}>
+                        <span style={{width:'12px', marginRight:'0.5rem'}}>🗑️</span> 삭제
+                    </ContextMenuItem>
+                </ContextMenuContainer>
+            )}
             <AppContainer>
                 <Header>
                     <ThemeToggleButton onClick={toggleTheme}>
-                        {theme === 'light' ? '🌙' : '☀️'}
+                        {theme === 'light' ? '☀️' : '🌙'}
                     </ThemeToggleButton>
                 </Header>
 
-                <NamePoolContainer
-                    onDragOver={(e) => onDragOver(e, { type: 'pool' })}
-                    onDragLeave={onDragLeave}
-                    onDrop={(e) => onDrop(e, { type: 'pool' })}
-                    $isDragOver={dragOverTarget?.type === 'pool'}
-                >
-                    {names.map(name => (
-                        <DraggableName
-                            key={name}
-                            draggable
-                            onDragStart={(e) => onDragStart(e, { name, origin: { type: 'pool' } })}
-                            $inSlot={false}
+                <TieredNamePoolContainer>
+                    {Object.keys(tierLists).map(tier => (
+                        <TierRow
+                            key={tier}
+                            onDragOver={(e) => onDragOver(e, { type: 'pool', tier })}
+                            onDragLeave={onDragLeave}
+                            onDrop={(e) => onDrop(e, { type: 'pool', tier })}
+                            $isDragOver={dragOverTarget?.type === 'pool' && dragOverTarget?.tier === tier}
                         >
-                            {name}
-                        </DraggableName>
+                            <TierLabel tierColor={theme[tier]}>{tier}</TierLabel>
+                            {tierLists[tier].map(player => (
+                                <DraggableName
+                                    key={player.name}
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, { name: player.name, origin: { type: 'pool' } })}
+                                    onContextMenu={(e) => handleContextMenu(e, player.name)}
+                                    tier={player.tier}
+                                    $inSlot={false}
+                                >
+                                    {player.name}
+                                </DraggableName>
+                            ))}
+                        </TierRow>
                     ))}
-                </NamePoolContainer>
+                </TieredNamePoolContainer>
 
-                <LanesContainer>
+                <LanesContainer ref={lanesRef}>
                     {POSITIONS.map(pos => {
                         const laneData = lanes[pos];
                         return (
@@ -386,16 +499,15 @@ const App = () => {
                                         <DraggableName
                                             draggable
                                             onDragStart={(e) => onDragStart(e, { name: laneData.name1, origin: { type: 'slot', position: pos, slot: 'name1' } })}
+                                            onContextMenu={(e) => handleContextMenu(e, laneData.name1)}
+                                            tier={findPlayer(laneData.name1)?.tier}
                                             $inSlot={true}
                                         >
                                             {laneData.name1}
                                         </DraggableName>
                                     )}
                                 </NameSlot>
-                                <Operator
-                                    onClick={(e) => handleOperatorClick(pos, e)}
-                                    onContextMenu={(e) => handleOperatorClick(pos, e)}
-                                >
+                                <Operator onClick={(e) => handleOperatorClick(pos, e)} onContextMenu={(e) => handleOperatorClick(pos, e)}>
                                     {laneData.operator}
                                 </Operator>
                                 <NameSlot
@@ -408,6 +520,8 @@ const App = () => {
                                         <DraggableName
                                             draggable
                                             onDragStart={(e) => onDragStart(e, { name: laneData.name2, origin: { type: 'slot', position: pos, slot: 'name2' } })}
+                                            onContextMenu={(e) => handleContextMenu(e, laneData.name2)}
+                                            tier={findPlayer(laneData.name2)?.tier}
                                             $inSlot={true}
                                         >
                                             {laneData.name2}
@@ -430,9 +544,10 @@ const App = () => {
                     />
                 </InputContainer>
             </AppContainer>
+
+            <ActionButtons captureRef={lanesRef} onRandomize={handleRandomizeSides} />
         </ThemeProvider>
     );
 };
 
 export default App;
-
