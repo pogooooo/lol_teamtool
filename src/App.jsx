@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import html2canvas from 'html2canvas';
-
 // --- THEMES & TIERS --- //
 const TIER_COLORS = {
     상: '#52B788', // Green
@@ -324,9 +323,15 @@ const App = () => {
     const handleInputSubmit = (e) => {
         if (e.key === 'Enter' && e.target.value.trim() !== '') {
             const newNames = e.target.value.trim().split(/\s+/);
-            const newPlayers = newNames.map(name => ({ name, tier: '중' })); // 기본 등급을 '중'으로 설정
-            setAllPlayers(newPlayers);
-            setLanes(initialLanes);
+
+            setAllPlayers(prevPlayers => {
+                const existingNames = prevPlayers.map(p => p.name);
+                const newPlayers = newNames
+                    .filter(name => !existingNames.includes(name)) // 중복되지 않은 이름만 필터링
+                    .map(name => ({ name, tier: '중' })); // 기본 등급 '중'으로 추가
+                return [...prevPlayers, ...newPlayers];
+            });
+
             setInputValue('');
         }
     };
@@ -560,3 +565,5 @@ const App = () => {
 };
 
 export default App;
+
+
