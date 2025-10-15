@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import html2canvas from 'html2canvas';
 
-
 // --- THEMES & TIERS --- //
 const TIER_COLORS = {
     상: '#52B788', // Green
@@ -122,8 +121,10 @@ const DraggableName = styled.div`
     transition: all 0.2s ease;
     width: ${({ $inSlot }) => ($inSlot ? '100%' : 'auto')};
     min-width: 80px;
-    border: 3px solid transparent;
-    box-shadow: ${({ theme, tier }) => tier ? `inset 0 0 0 4px ${theme[tier]}` : '0 1px 3px rgba(0,0,0,0.1)'};
+    
+    /* html2canvas가 인식할 수 있도록 box-shadow 대신 border 사용 */
+    border: 4px solid ${({ theme, tier }) => tier ? theme[tier] : 'transparent'};
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 
     &:active {
         cursor: grabbing;
@@ -252,6 +253,8 @@ const ActionButtonStyled = styled.button`
 
 const ActionButtons = ({ captureRef, onRandomize }) => {
     const [copyStatus, setCopyStatus] = useState('복사');
+    const [randomizeStatus, setRandomizeStatus] = useState('지정');
+
     const captureAndCopy = () => {
         if (captureRef.current) {
             html2canvas(captureRef.current, {
@@ -269,13 +272,19 @@ const ActionButtons = ({ captureRef, onRandomize }) => {
         }
     };
 
+    const handleRandomizeClick = () => {
+        onRandomize();
+        setRandomizeStatus('완료!');
+        setTimeout(() => setRandomizeStatus('지정'), 1500);
+    };
+
     return (
         <ActionButtonsContainer>
             <ActionButtonStyled onClick={captureAndCopy}>
                 🖼️ 팀 화면 {copyStatus}
             </ActionButtonStyled>
-            <ActionButtonStyled onClick={onRandomize}>
-                🎲 팀 위치 지정
+            <ActionButtonStyled onClick={handleRandomizeClick}>
+                🎲 팀 위치 {randomizeStatus}
             </ActionButtonStyled>
         </ActionButtonsContainer>
     );
@@ -473,7 +482,7 @@ const App = () => {
                                     draggable
                                     onDragStart={(e) => onDragStart(e, { name: player.name, origin: { type: 'pool' } })}
                                     onContextMenu={(e) => handleContextMenu(e, player.name)}
-                                    tier={player.tier}
+                                    tier={player.tier || (tier === '중' ? null : player.tier)}
                                     $inSlot={false}
                                 >
                                     {player.name}
