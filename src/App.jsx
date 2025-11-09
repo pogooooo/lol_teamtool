@@ -250,9 +250,10 @@ const ActionButtonStyled = styled.button`
     }
 `;
 
-const ActionButtons = ({ captureRef, onRandomize }) => {
+const ActionButtons = ({ captureRef, onRandomize, onReset }) => {
     const [copyStatus, setCopyStatus] = useState('복사');
     const [randomizeStatus, setRandomizeStatus] = useState('지정');
+    const [resetStatus, setResetStatus] = useState('초기화');
 
     const captureAndCopy = () => {
         if (captureRef.current) {
@@ -277,8 +278,17 @@ const ActionButtons = ({ captureRef, onRandomize }) => {
         setTimeout(() => setRandomizeStatus('지정'), 1500);
     };
 
+    const handleResetClick = () => {
+        onReset();
+        setResetStatus('완료!');
+        setTimeout(() => setResetStatus('초기화'), 1500);
+    };
+
     return (
         <ActionButtonsContainer>
+            <ActionButtonStyled onClick={handleResetClick}>
+                🔄 초기화 {resetStatus}
+            </ActionButtonStyled>
             <ActionButtonStyled onClick={captureAndCopy}>
                 🖼️ 팀 화면 {copyStatus}
             </ActionButtonStyled>
@@ -372,6 +382,10 @@ const App = () => {
             }
             return newLanes;
         });
+    };
+
+    const handleReset = () => {
+        setLanes(initialLanes); // lanes 상태를 초기 상태로 되돌립니다.
     };
 
     const onDragStart = (e, item) => {
@@ -559,7 +573,7 @@ const App = () => {
                 </InputContainer>
             </AppContainer>
 
-            <ActionButtons captureRef={lanesRef} onRandomize={handleRandomizeSides} />
+            <ActionButtons captureRef={lanesRef} onRandomize={handleRandomizeSides} onReset={handleReset} />
         </ThemeProvider>
     );
 };
