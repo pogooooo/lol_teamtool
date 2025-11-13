@@ -18,7 +18,7 @@ export const TierPool = () => {
                     onDrop={(e) => handlers.onDrop(e, { type: 'pool', tier })}
                     $isDragOver={dragOverTarget?.type === 'pool' && dragOverTarget?.tier === tier}
                 >
-                    <TierLabel tierColor={theme[tier]}>{tier}</TierLabel>
+                    <TierLabel $tierColor={theme[tier]}>{tier}</TierLabel>
                     {tierLists[tier].map(player => (
                         <DraggableName
                             key={player.name}

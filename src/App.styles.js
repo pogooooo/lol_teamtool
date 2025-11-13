@@ -96,12 +96,11 @@ export const TierRow = styled.div`
 `;
 
 export const TierLabel = styled.h3`
-    color: ${({ tierColor }) => tierColor};
+    color: ${({ $tierColor }) => $tierColor}; /* 1. $ 추가 */
     font-size: 1.1rem;
     width: 40px;
     text-align: center;
 `;
-
 
 export const DraggableName = styled.div`
     background-color: ${({ theme }) => theme.nameBg};

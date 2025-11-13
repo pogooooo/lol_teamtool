@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useRef} from 'react';
 import { POSITIONS, OPERATORS } from '../constants';
 import constate from "constate";
 
@@ -14,6 +14,7 @@ export const useTeamBuilderLogic = () => {
     const [lanes, setLanes] = useState(initialLanes);
     const [dragOverTarget, setDragOverTarget] = useState(null);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetName: null });
+    const lanesRef = useRef(null);
 
     useEffect(() => {
         const handleClick = () => setContextMenu({ visible: false, x: 0, y: 0, targetName: null });
@@ -211,6 +212,7 @@ export const useTeamBuilderLogic = () => {
         theme,
         toggleTheme,
         lanes,
+        lanesRef,
         dragOverTarget,
         contextMenu,
         inputValue,
