@@ -81,7 +81,7 @@ const ActionButtons = ({ captureRef, onRandomize, onReset }) => {
 
 // --- APP COMPONENT --- //
 const POSITIONS = ['탑', '정글', '미드', '원딜', '서포터'];
-const OPERATORS = ['=', '>', '<'];
+const OPERATORS = ['>', '>=', '=', '<=', '<'];
 
 const App = () => {
     const [theme, setTheme] = useState('dark');
