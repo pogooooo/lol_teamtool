@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import html2canvas from 'html2canvas';
 import { ActionButtonsContainer, ActionButtonStyled } from '../App.styles';
+import { useTeamBuilderContext } from '../hooks/useTeamBuilderLogic';
 
-const ActionButtons = ({ captureRef, onRandomize, onReset }) => {
+const ActionButtons = () => {
+    const { handlers, lanesRef } = useTeamBuilderContext();
+    const { handleRandomizeSides, handleReset, handleRandomAssign } = handlers;
+
     const [copyStatus, setCopyStatus] = useState('복사');
     const [randomizeStatus, setRandomizeStatus] = useState('지정');
     const [resetStatus, setResetStatus] = useState('초기화');
+    const [assignStatus, setAssignStatus] = useState('배치');
 
     const captureAndCopy = () => {
-        if (captureRef.current) {
-            html2canvas(captureRef.current, {
+        if (lanesRef.current) {
+            html2canvas(lanesRef.current, {
                 backgroundColor: null,
                 useCORS: true,
             }).then(canvas => {
@@ -25,21 +30,30 @@ const ActionButtons = ({ captureRef, onRandomize, onReset }) => {
     };
 
     const handleRandomizeClick = () => {
-        onRandomize();
+        handleRandomizeSides();
         setRandomizeStatus('완료!');
         setTimeout(() => setRandomizeStatus('지정'), 1500);
     };
 
     const handleResetClick = () => {
-        onReset();
+        handleReset();
         setResetStatus('완료!');
         setTimeout(() => setResetStatus('초기화'), 1500);
     };
 
+    const handleRandomAssignClick = () => {
+        handleRandomAssign();
+        setAssignStatus('완료!');
+        setTimeout(() => setAssignStatus('배치'), 1500);
+    };
+
     return (
         <ActionButtonsContainer>
+            <ActionButtonStyled onClick={handleRandomAssignClick}>
+                🧑‍ 1명 랜덤 {assignStatus}
+            </ActionButtonStyled>
             <ActionButtonStyled onClick={handleResetClick}>
-                🔄 초기화 {resetStatus}
+                🔄 초기화
             </ActionButtonStyled>
             <ActionButtonStyled onClick={captureAndCopy}>
                 🖼️ 팀 화면 {copyStatus}

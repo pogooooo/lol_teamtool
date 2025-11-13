@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { POSITIONS, OPERATORS } from '../constants';
+import constate from "constate";
 
 const initialLanes = POSITIONS.reduce((acc, pos) => {
     acc[pos] = { name1: null, name2: null, operator: '=' };
@@ -77,6 +78,43 @@ export const useTeamBuilderLogic = () => {
 
     const handleReset = () => {
         setLanes(initialLanes);
+    };
+
+    const handleRandomAssign = () => {
+        const playersInLanes = Object.values(lanes)
+            .flatMap(l => [l.name1, l.name2])
+            .filter(Boolean);
+        const unassignedPlayers = allPlayers.filter(
+            p => !playersInLanes.includes(p.name)
+        );
+
+        const emptySlots = [];
+        POSITIONS.forEach(pos => {
+            if (lanes[pos].name1 === null) {
+                emptySlots.push({ position: pos, slot: 'name1' });
+            }
+            if (lanes[pos].name2 === null) {
+                emptySlots.push({ position: pos, slot: 'name2' });
+            }
+        });
+
+        if (unassignedPlayers.length === 0 || emptySlots.length === 0) {
+            console.warn("배치할 플레이어 또는 빈 슬롯이 없습니다.");
+            return;
+        }
+
+        const randomPlayerIndex = Math.floor(Math.random() * unassignedPlayers.length);
+        const playerToAssign = unassignedPlayers[randomPlayerIndex];
+
+        const randomSlotIndex = Math.floor(Math.random() * emptySlots.length);
+        const slotToFill = emptySlots[randomSlotIndex];
+
+        setLanes(prevLanes => {
+            const newLanes = JSON.parse(JSON.stringify(prevLanes)); // 깊은 복사
+            const { position, slot } = slotToFill;
+            newLanes[position][slot] = playerToAssign.name;
+            return newLanes;
+        });
     };
 
     const onDragStart = (e, item) => {
@@ -192,6 +230,9 @@ export const useTeamBuilderLogic = () => {
             handleOperatorClick,
             handleSwap,
             findPlayer,
+            handleRandomAssign,
         }
     };
 };
+
+export const [TeamBuilderProvider, useTeamBuilderContext] = constate(useTeamBuilderLogic);
