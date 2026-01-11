@@ -9,7 +9,7 @@ const ActionButtons = () => {
 
     const [copyStatus, setCopyStatus] = useState('복사');
     const [randomizeStatus, setRandomizeStatus] = useState('지정');
-    const [resetStatus, setResetStatus] = useState('초기화');
+    const [, setResetStatus] = useState('초기화');
     const [assignStatus, setAssignStatus] = useState('배치');
 
     const captureAndCopy = () => {
@@ -50,16 +50,16 @@ const ActionButtons = () => {
     return (
         <ActionButtonsContainer>
             <ActionButtonStyled onClick={handleRandomAssignClick}>
-                🧑‍ 1명 랜덤 {assignStatus}
+                1명 랜덤 {assignStatus}
             </ActionButtonStyled>
             <ActionButtonStyled onClick={handleResetClick}>
-                🔄 초기화
+                초기화
             </ActionButtonStyled>
             <ActionButtonStyled onClick={captureAndCopy}>
-                🖼️ 팀 화면 {copyStatus}
+                팀 화면 {copyStatus}
             </ActionButtonStyled>
             <ActionButtonStyled onClick={handleRandomizeClick}>
-                🎲 팀 위치 {randomizeStatus}
+                팀 위치 {randomizeStatus}
             </ActionButtonStyled>
         </ActionButtonsContainer>
     );
