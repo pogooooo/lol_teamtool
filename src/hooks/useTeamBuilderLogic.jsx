@@ -217,6 +217,7 @@ export const useTeamBuilderLogic = () => {
         contextMenu,
         inputValue,
         tierLists,
+        allPlayers,
         handlers: {
             handleInputChange,
             handleInputSubmit,

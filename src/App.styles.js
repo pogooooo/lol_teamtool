@@ -1,4 +1,4 @@
-import styled, { createGlobalStyle } from 'styled-components';
+import styled, {createGlobalStyle, keyframes} from 'styled-components';
 
 // --- THEMES & TIERS --- //
 export const TIER_COLORS = {
@@ -176,9 +176,7 @@ export const NameInput = styled.input`
     &:focus { border-color: ${({ theme }) => theme.text}; }
 `;
 
-export const ContextMenuContainer = styled.div.attrs(props => ({
-    style: { top: `${props.y}px`, left: `${props.x}px` },
-}))`
+export const ContextMenuContainer = styled.div.attrs(props => ({style: { top: `${props.y}px`, left: `${props.x}px` },}))`
     position: absolute;
     background-color: ${({ theme }) => theme.contextMenu};
     border: 1px solid ${({ theme }) => theme.contextMenuBorder};
@@ -243,4 +241,45 @@ export const ActionButtonStyled = styled.button`
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
+`;
+
+const slideUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+export const ChatSideContainer = styled.div`
+  position: fixed;
+  bottom: 100px;
+  width: 300px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  z-index: 5;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent, black 20%);
+
+  &.left { left: 20px; }
+  &.right { right: 20px; }
+`;
+
+export const ChatBubble = styled.div`
+  background: ${({ theme }) => theme.mode === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)'};
+  backdrop-filter: blur(4px);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: ${({ theme }) => theme.text};
+  animation: ${slideUp} 0.3s ease-out;
+  border-left: 3px solid #C89B3C;
+  max-width: 100%;
+  word-break: break-all;
+
+  .name {
+    font-weight: bold;
+    color: #C89B3C;
+    margin-right: 5px;
+  }
 `;
