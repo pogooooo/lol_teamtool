@@ -36,6 +36,17 @@ const CHAT_TEMPLATES = [
     "{name}도 사람이야 사람!",
     "어차피 우승은 {name}",
     "{name}이 {name}정돈 이기지",
+    "{name} 네르지 마세요~~",
+    "{name}은 완전히 멘탈이 나가버렸습니다",
+    "팩트는 {name}는 {name}가 발라버린다는 거임",
+    "{name}는 대학시절 묵찌빠를 전공했다는 사실",
+    "나 {name}인데 {name}진다에 개추 눌렀다",
+    "{name}.. {name}가 없는 시대에 태어난 범부여..",
+    "{name}가 정글링을 하다가 심술두꺼비한테 죽은 건에 대하여",
+    "고도로 발전한 {name}는 심술두꺼비와 구분할 수 없다",
+    "{name}가... 말대꾸!?",
+    "{name}를 죽인 {name}를 15년 후에 죽여주세요",
+    "중요한 건 꺽이지 않는 {name}"
 ];
 
 export const AprilFoolsChat = () => {
@@ -64,10 +75,12 @@ export const AprilFoolsChat = () => {
     const generateChat = () => {
         if (allPlayers.length === 0) return;
 
-        const randomPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)].name;
         const randomTemplate = CHAT_TEMPLATES[Math.floor(Math.random() * CHAT_TEMPLATES.length)];
 
-        const message = randomTemplate.replaceAll("{name}", randomPlayer);
+        const message = randomTemplate.replace(/{name}/g, () => {
+            const randomPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)].name;
+            return randomPlayer;
+        });
 
         const newChat = { id: Date.now() + Math.random(), message };
         setChats(prev => [...prev.slice(-9), newChat]);
