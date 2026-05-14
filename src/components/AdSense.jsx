@@ -10,11 +10,11 @@ export const AdSense = () => {
     }, []);
 
     return (
-        <div style={{ textAlign: 'center', margin: '20px 0' }}>
+        <div style={{ textAlign: 'center', margin: '20px 0', background: '#fff' }}>
             <ins className="adsbygoogle"
                  style={{ display: 'block' }}
-                 data-ad-client="ca-pub-여기에_내_고유_아이디_입력"
-                 data-ad-slot="여기에_광고_슬롯_아이디_입력"
+                 data-ad-client="ca-pub-1494698073875494"
+                 data-ad-slot="6344413074"
                  data-ad-format="auto"
                  data-full-width-responsive="true">
             </ins>

@@ -1,10 +1,9 @@
-import styled, {createGlobalStyle, keyframes} from 'styled-components';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
 
-// --- THEMES & TIERS --- //
 export const TIER_COLORS = {
-    상: '#52B788', // Green
-    중: '#0077B6', // Blue
-    하: '#F7B801', // Yellow
+    상: '#52B788',
+    중: '#0077B6',
+    하: '#F7B801',
 };
 
 export const lightTheme = {
@@ -35,8 +34,6 @@ export const darkTheme = {
     ...TIER_COLORS
 };
 
-
-// --- GLOBAL STYLES --- //
 export const GlobalStyle = createGlobalStyle`
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -50,15 +47,36 @@ export const GlobalStyle = createGlobalStyle`
     }
 `;
 
-// --- STYLED COMPONENTS --- //
+export const PageWrapper = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    min-height: 100vh;
+    padding-top: 20px;
+    gap: 20px;
+`;
+
+export const AdContainer = styled.div`
+    width: 160px;
+    min-width: 160px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 20px;
+
+    @media (max-width: 1200px) {
+        display: none;
+    }
+`;
+
 export const AppContainer = styled.div`
     display: flex;
     flex-direction: column;
     height: 100vh;
     padding: 2rem;
     gap: 1.5rem;
+    width: 100%;
     max-width: 800px;
-    margin: 0 auto;
 `;
 
 export const Header = styled.header`
@@ -69,7 +87,17 @@ export const Header = styled.header`
 `;
 
 export const ThemeToggleButton = styled.button`
-    background: ${({ theme }) => theme.card}; color: ${({ theme }) => theme.text}; border: 1px solid ${({ theme }) => theme.cardBorder}; border-radius: 9999px; padding: 0.5rem; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out;
+    background: ${({ theme }) => theme.card};
+    color: ${({ theme }) => theme.text};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: 9999px;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
     &:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 `;
 
@@ -96,7 +124,7 @@ export const TierRow = styled.div`
 `;
 
 export const TierLabel = styled.h3`
-    color: ${({ $tierColor }) => $tierColor}; /* 1. $ 추가 */
+    color: ${({ $tierColor }) => $tierColor};
     font-size: 1.1rem;
     width: 40px;
     text-align: center;
@@ -118,8 +146,6 @@ export const DraggableName = styled.div`
     transition: all 0.2s ease;
     width: ${({ $inSlot }) => ($inSlot ? '100%' : 'auto')};
     min-width: 80px;
-    
-    /* html2canvas가 인식할 수 있도록 box-shadow 대신 border 사용 */
     border: 4px solid ${({ theme, tier }) => tier ? theme[tier] : 'transparent'};
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 
@@ -139,11 +165,22 @@ export const LanesContainer = styled.main`
 `;
 
 export const Lane = styled.div`
-    display: grid; grid-template-columns: 80px 1fr 40px 1fr 40px; align-items: center; gap: 1rem; background: ${({ theme }) => theme.card}; border: 1px solid ${({ theme }) => theme.cardBorder}; padding: 1rem 1.5rem; border-radius: 12px; width: 100%;
+    display: grid;
+    grid-template-columns: 80px 1fr 40px 1fr 40px;
+    align-items: center;
+    gap: 1rem;
+    background: ${({ theme }) => theme.card};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    width: 100%;
 `;
 
 export const LaneLabel = styled.span`
-    font-weight: 600; text-align: right; color: ${({ theme }) => theme.placeholder}; font-size: 1.125rem;
+    font-weight: 600;
+    text-align: right;
+    color: ${({ theme }) => theme.placeholder};
+    font-size: 1.125rem;
 `;
 
 export const NameSlot = styled.div`
@@ -157,12 +194,26 @@ export const NameSlot = styled.div`
 `;
 
 export const Operator = styled.div`
-    font-size: 1.75rem; font-weight: bold; cursor: pointer; user-select: none; color: ${({ theme }) => theme.placeholder}; text-align: center; transition: color 0.2s ease;
+    font-size: 1.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    color: ${({ theme }) => theme.placeholder};
+    text-align: center;
+    transition: color 0.2s ease;
     &:hover { color: ${({ theme }) => theme.text}; }
 `;
 
 export const SwapButton = styled.button`
-    background: transparent; border: none; cursor: pointer; font-size: 1.5rem; color: ${({ theme }) => theme.placeholder}; transition: transform 0.2s ease, color 0.2s ease; display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: ${({ theme }) => theme.placeholder};
+    transition: transform 0.2s ease, color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     &:hover { transform: rotate(180deg); color: ${({ theme }) => theme.text}; }
 `;
 
@@ -171,7 +222,16 @@ export const InputContainer = styled.footer`
 `;
 
 export const NameInput = styled.input`
-    width: 100%; padding: 1rem; font-size: 1.2rem; border: 1px solid ${({ theme }) => theme.cardBorder}; background: ${({ theme }) => theme.card}; color: ${({ theme }) => theme.text}; border-radius: 12px; outline: none; text-align: center; transition: all 0.2s ease;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.2rem;
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    background: ${({ theme }) => theme.card};
+    color: ${({ theme }) => theme.text};
+    border-radius: 12px;
+    outline: none;
+    text-align: center;
+    transition: all 0.2s ease;
     &::placeholder { color: ${({ theme }) => theme.placeholder}; }
     &:focus { border-color: ${({ theme }) => theme.text}; }
 `;
@@ -203,7 +263,6 @@ export const ContextMenuItem = styled.button`
     &:hover {
         background-color: ${({theme}) => theme.dragOver};
     }
-
 `;
 
 export const ColorDot = styled.span`
@@ -214,7 +273,6 @@ export const ColorDot = styled.span`
     border: 1px solid ${({ theme }) => theme.contextMenuBorder};
 `;
 
-// --- ACTION BUTTONS STYLES --- //
 export const ActionButtonsContainer = styled.div`
     position: fixed;
     bottom: 2rem;
@@ -244,42 +302,42 @@ export const ActionButtonStyled = styled.button`
 `;
 
 const slideUp = keyframes`
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 `;
 
 export const ChatSideContainer = styled.div`
-  position: fixed;
-  bottom: 100px;
-  width: 300px;
-  height: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow: hidden;
-  z-index: 5;
-  pointer-events: none;
-  mask-image: linear-gradient(to bottom, transparent, black 20%);
+    position: fixed;
+    bottom: 100px;
+    width: 300px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    z-index: 5;
+    pointer-events: none;
+    mask-image: linear-gradient(to bottom, transparent, black 20%);
 
-  &.left { left: 20px; }
-  &.right { right: 20px; }
+    &.left { left: 20px; }
+    &.right { right: 20px; }
 `;
 
 export const ChatBubble = styled.div`
-  background: ${({ theme }) => theme.mode === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)'};
-  backdrop-filter: blur(4px);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.text};
-  animation: ${slideUp} 0.3s ease-out;
-  border-left: 3px solid #C89B3C;
-  max-width: 100%;
-  word-break: break-all;
+    background: ${({ theme }) => theme.mode === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)'};
+    backdrop-filter: blur(4px);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: ${({ theme }) => theme.text};
+    animation: ${slideUp} 0.3s ease-out;
+    border-left: 3px solid #C89B3C;
+    max-width: 100%;
+    word-break: break-all;
 
-  .name {
-    font-weight: bold;
-    color: #C89B3C;
-    margin-right: 5px;
-  }
+    .name {
+        font-weight: bold;
+        color: #C89B3C;
+        margin-right: 5px;
+    }
 `;

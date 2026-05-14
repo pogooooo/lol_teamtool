@@ -5,7 +5,9 @@ import {
     GlobalStyle,
     lightTheme,
     darkTheme,
-    AppContainer
+    AppContainer,
+    PageWrapper,
+    AdContainer
 } from './App.styles.js';
 
 import ActionButtons from './components/ActionButtons.jsx';
@@ -15,7 +17,8 @@ import { AppContextMenu } from './components/AppContextMenu.jsx';
 import { TierPool } from './components/TierPool.jsx';
 import { LaneDisplay } from './components/LaneDisplay.jsx';
 import { PlayerInput } from './components/PlayerInput.jsx';
-import {AprilFoolsChat} from "./components/AprilFoolsChat.jsx";
+import { AprilFoolsChat } from "./components/AprilFoolsChat.jsx";
+import { AdSense } from "./components/AdSense.jsx";
 
 const App = () => {
     const { theme } = useTeamBuilderContext();
@@ -24,28 +27,26 @@ const App = () => {
     return (
         <ThemeProvider theme={currentTheme}>
             <GlobalStyle />
-
-            {/* 3. 컨텍스트 메뉴 컴포넌트 */}
             <AppContextMenu />
-
             <AprilFoolsChat />
 
-            <AppContainer>
-                {/* 4. 헤더 컴포넌트 */}
-                <AppHeader />
+            <PageWrapper>
+                <AdContainer>
+                    <AdSense adSlot="왼쪽_광고_슬롯_아이디" />
+                </AdContainer>
 
-                {/* 5. 티어 풀 컴포넌트 */}
-                <TierPool />
+                <AppContainer>
+                    <AppHeader />
+                    <TierPool />
+                    <LaneDisplay />
+                    <PlayerInput />
+                    <ActionButtons />
+                </AppContainer>
 
-                {/* 6. 라인 컴포넌트 */}
-                <LaneDisplay />
-
-                {/* 7. 입력창 컴포넌트 */}
-                <PlayerInput />
-            </AppContainer>
-
-            {/* 8. 액션 버튼 컴포넌트 (prop 전달 없음) */}
-            <ActionButtons />
+                <AdContainer>
+                    <AdSense adSlot="오른쪽_광고_슬롯_아이디" />
+                </AdContainer>
+            </PageWrapper>
         </ThemeProvider>
     );
 };
