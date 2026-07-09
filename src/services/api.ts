@@ -86,7 +86,7 @@ export const errorMessage = (e: unknown): string => {
     if (e instanceof AxiosError) {
         const serverMsg = (e.response?.data as { error?: string } | undefined)?.error;
         if (serverMsg) return serverMsg;
-        if (e.code === 'ERR_NETWORK' || !e.response) return '로컬 API 서버에 연결할 수 없습니다. `npm run server`를 실행해 주세요.';
+        if (e.code === 'ERR_NETWORK' || !e.response) return '서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주세요. (로컬 개발: npm run server)';
     }
     return '요청 처리 중 오류가 발생했습니다.';
 };

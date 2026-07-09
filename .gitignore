@@ -16,6 +16,9 @@ dist-ssr
 .env
 server/data/
 
+# Cloudflare wrangler 로컬 상태
+.wrangler/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

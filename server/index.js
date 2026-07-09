@@ -454,7 +454,7 @@ app.post('/api/groups/:groupId/import', async (req, res) => {
 const PICK_TYPES = new Set(['TOURNAMENT_DRAFT', 'DRAFT_MODE', 'BLIND_PICK', 'ALL_RANDOM']);
 const MAP_TYPES = new Set(['SUMMONERS_RIFT', 'HOWLING_ABYSS']);
 // Stub 프로바이더 등록용 콜백 URL — 정식 전환 시 결과 수신 엔드포인트로 교체
-const CALLBACK_URL = 'https://lol-teamtool.vercel.app/api/tournament-callback';
+const CALLBACK_URL = 'https://lol-teamtool.pages.dev/api/tournament-callback';
 
 const ensureTournament = async (group) => {
     const existing = store.getTournament(group.id);

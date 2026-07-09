@@ -1,0 +1,13 @@
+# Cloudflare Pages 설정 — 정적 프론트(dist) + Pages Functions(functions/) + D1
+# 배포: npm run deploy  ·  스키마 적용: npm run db:schema
+name = "lol-teamtool"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lol-teamtool"
+database_id = "b0977d87-dbe1-4ddc-aefa-c2b6dfb4efea"
+
+# RIOT_API_KEY는 시크릿으로 관리한다 (커밋 금지):
+#   npx wrangler pages secret put RIOT_API_KEY --project-name lol-teamtool
