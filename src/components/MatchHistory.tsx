@@ -9,6 +9,7 @@ import { sortRankings, winRateOf } from '../services/api';
 import type { PlayerRanking } from '../services/api';
 import { GroupGate } from './history/GroupGate';
 import { PlayerManager } from './history/PlayerManager';
+import { HelpSection } from './history/HelpSection';
 import { MatchList } from './history/MatchList';
 import { TournamentPanel } from './history/TournamentPanel';
 import { GrassCalendar } from './history/GrassCalendar';
@@ -52,7 +53,12 @@ export const MatchHistory = () => {
     }
 
     if (!archive.activeGroup) {
-        return <GroupGate archive={archive} />;
+        return (
+            <HistoryContainer>
+                <GroupGate archive={archive} />
+                <HelpSection />
+            </HistoryContainer>
+        );
     }
     const group = archive.activeGroup;
     const stats = archive.stats;
@@ -161,6 +167,8 @@ export const MatchHistory = () => {
             </ActionsRow>
 
             <MatchList archive={archive} />
+
+            <HelpSection />
 
             {showRanking && (
                 <RankingModal ranking={rankings} initialMode={rankMode} onClose={() => setShowRanking(false)} />
