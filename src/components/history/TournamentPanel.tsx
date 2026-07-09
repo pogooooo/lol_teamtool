@@ -101,7 +101,7 @@ export const TournamentPanel = ({ archive, groupId }: { archive: Archive; groupI
                 <PrimaryButton
                     onClick={handleCreate}
                     disabled={!archive.riotReady || busy}
-                    title={archive.riotReady ? '' : '서버 설정이 필요합니다'}
+                    title={archive.riotReady ? '' : '라이엇 연동 준비 중입니다. 잠시 후 다시 시도해 주세요.'}
                 >
                     {busy ? '발급 중...' : '코드 발급'}
                 </PrimaryButton>

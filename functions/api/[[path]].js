@@ -127,7 +127,7 @@ on('DELETE', '/players/:playerId', async ({ store, params }) => {
 on('POST', '/players/:playerId/accounts', async ({ store, riot, params, body }) => {
     const player = await store.getPlayer(params.playerId);
     if (!player) return json({ error: '참가자를 찾을 수 없습니다.' }, 404);
-    if (!riot.configured()) return json({ error: 'RIOT_API_KEY 시크릿이 설정되지 않았습니다.' }, 503);
+    if (!riot.configured()) return json({ error: '라이엇 연동이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.' }, 503);
 
     const gameName = String(body?.gameName ?? '').trim();
     const tagLine = String(body?.tagLine ?? '').trim();
@@ -246,7 +246,7 @@ on('GET', '/players/:playerId/profile', async ({ store, riot, params }) => {
     const results = [];
     for (const acc of accounts) {
         if (!riot.configured()) {
-            results.push({ ...acc, summoner: null, leagues: [], masteries: [], masteryScore: null, recentStats: null, error: 'RIOT_API_KEY 시크릿이 설정되지 않았습니다.' });
+            results.push({ ...acc, summoner: null, leagues: [], masteries: [], masteryScore: null, recentStats: null, error: '라이엇 연동이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.' });
             continue;
         }
         try {
@@ -379,7 +379,7 @@ const IMPORT_DETAIL_CAP = 30; // 서브리퀘스트 50개 제한 보호 — 남�
 
 on('POST', '/groups/:groupId/import', async ({ store, riot, params, body }) => {
     const groupId = params.groupId;
-    if (!riot.configured()) return json({ error: 'RIOT_API_KEY 시크릿이 설정되지 않았습니다.' }, 503);
+    if (!riot.configured()) return json({ error: '라이엇 연동이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.' }, 503);
 
     const minMembers = Math.max(1, Number(body?.minMembers ?? 1));
     const accounts = await store.listAccountsByGroup(groupId);
@@ -448,7 +448,7 @@ on('GET', '/groups/:groupId/tournament', async ({ store, params }) =>
     }));
 
 on('POST', '/groups/:groupId/tournament/codes', async ({ store, riot, params, body }) => {
-    if (!riot.configured()) return json({ error: 'RIOT_API_KEY 시크릿이 설정되지 않았습니다.' }, 503);
+    if (!riot.configured()) return json({ error: '라이엇 연동이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.' }, 503);
     const group = await store.getGroup(params.groupId);
     if (!group) return json({ error: '그룹을 찾을 수 없습니다.' }, 404);
 
@@ -471,7 +471,7 @@ on('DELETE', '/tournament/codes/:code', async ({ store, params }) => {
 
 on('GET', '/tournament/codes/:code/events', async ({ store, riot, params }) => {
     if (!(await store.getTournamentCode(params.code))) {
-        return json({ error: '이 서버에서 발급한 코드가 아닙니다.' }, 404);
+        return json({ error: '이 사이트에서 발급한 코드가 아닙니다.' }, 404);
     }
     const eventList = await riot.stubLobbyEvents(params.code);
     return json({ eventList });
@@ -480,7 +480,7 @@ on('GET', '/tournament/codes/:code/events', async ({ store, riot, params }) => {
 // 코드로 치러진 매치를 수집해 내전 기록으로 저장
 on('POST', '/tournament/codes/:code/collect', async ({ store, riot, params }) => {
     const codeInfo = await store.getTournamentCode(params.code);
-    if (!codeInfo) return json({ error: '이 서버에서 발급한 코드가 아닙니다.' }, 404);
+    if (!codeInfo) return json({ error: '이 사이트에서 발급한 코드가 아닙니다.' }, 404);
 
     try {
         const ids = await riot.listMatchIdsByTournamentCode(params.code);
@@ -498,7 +498,7 @@ on('POST', '/tournament/codes/:code/collect', async ({ store, riot, params }) =>
     } catch (e) {
         if (e instanceof RiotError && (e.status === 401 || e.status === 403)) {
             return json({
-                error: 'Stub 코드는 실제 경기 결과가 생성되지 않습니다. 코드 기준 결과 조회는 정식 Tournament API 승인 키부터 가능합니다.',
+                error: '지금은 테스트 기간이라 코드로 치러진 경기를 자동 수집할 수 없습니다. 정식 오픈 후 지원될 예정이며, 그동안은 "내전 자동 수집" 기능을 이용해 주세요.',
             }, 403);
         }
         if (e instanceof RiotError && e.status === 404) {

@@ -99,8 +99,8 @@ export const GroupGate = ({ archive }: { archive: Archive }) => {
             )}
 
             <Notice>
-                그룹·기록 데이터는 로컬 API 서버(SQLite)에 저장됩니다.
-                클라우드 전환(PLANNING.md 8장) 후 기기 간 공유가 가능해집니다.
+                그룹·기록 데이터는 서버에 저장됩니다.
+                참여 코드만 공유하면 친구들도 어느 기기에서든 같은 그룹의 기록을 함께 볼 수 있습니다.
             </Notice>
 
             {leaveTarget && (

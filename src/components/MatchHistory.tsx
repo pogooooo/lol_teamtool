@@ -43,10 +43,13 @@ export const MatchHistory = () => {
     if (archive.serverOk === false) {
         return (
             <NoticeCard>
-                <h3>로컬 API 서버에 연결할 수 없습니다</h3>
+                <h3>서버에 연결할 수 없습니다</h3>
                 <p>
-                    터미널에서 <code>npm run server</code>를 실행한 뒤 새로고침해 주세요.
-                    내전 기록 데이터(SQLite)와 Riot API 연동은 로컬 서버가 담당합니다.
+                    {import.meta.env.DEV ? (
+                        <>터미널에서 <code>npm run server</code>를 실행한 뒤 새로고침해 주세요. (개발 모드 안내)</>
+                    ) : (
+                        <>인터넷 연결을 확인한 뒤 새로고침해 주세요. 문제가 계속되면 잠시 후 다시 시도해 주세요.</>
+                    )}
                 </p>
             </NoticeCard>
         );

@@ -19,11 +19,11 @@ export class RiotError extends Error {
 
 const wrapStatus = (status) => {
     if (status === 401 || status === 403) {
-        return new RiotError(status, 'Riot API 키가 유효하지 않거나 만료되었습니다. 개발 키는 24시간마다 재발급해야 합니다.');
+        return new RiotError(status, '라이엇 연동에 일시적인 문제가 있습니다. 잠시 후 다시 시도해 주세요.');
     }
     if (status === 404) return new RiotError(404, '해당 Riot ID를 찾을 수 없습니다. 게임명과 태그를 확인해 주세요.');
-    if (status === 429) return new RiotError(429, 'Riot API 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.');
-    return new RiotError(status ?? 500, `Riot API 호출 실패 (${status ?? 'unknown'})`);
+    if (status === 429) return new RiotError(429, '요청이 많아 잠시 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');
+    return new RiotError(status ?? 500, '라이엇 서버에서 정보를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.');
 };
 
 const call = async (key, url, init = {}) => {
