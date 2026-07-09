@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import html2canvas from 'html2canvas';
 import { ActionButtonsContainer, ActionButtonStyled } from '../App.styles';
 import { useTeamBuilderContext } from '../hooks/useTeamBuilderLogic';
@@ -19,6 +19,7 @@ const ActionButtons = () => {
                 useCORS: true,
             }).then(canvas => {
                 canvas.toBlob(blob => {
+                    if (!blob) return;
                     navigator.clipboard.write([
                         new ClipboardItem({ 'image/png': blob })
                     ]);

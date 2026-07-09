@@ -1,20 +1,54 @@
-import {useState, useEffect, useRef} from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type * as React from 'react';
+import constate from 'constate';
 import { POSITIONS, OPERATORS } from '../constants';
-import constate from "constate";
+import type { DraggedItem, DragTarget, LanesState, Player, Position, SlotKey, Tier } from '../types';
 
-const initialLanes = POSITIONS.reduce((acc, pos) => {
+const initialLanes: LanesState = POSITIONS.reduce((acc, pos) => {
     acc[pos] = { name1: null, name2: null, operator: '=' };
     return acc;
-}, {});
+}, {} as LanesState);
+
+interface ContextMenuState {
+    visible: boolean;
+    x: number;
+    y: number;
+    targetName: string | null;
+}
+
+const cloneLanes = (lanes: LanesState): LanesState => JSON.parse(JSON.stringify(lanes)) as LanesState;
+
+// 새로고침해도 팀 빌더 상태(테마/참가자/배치)가 유지되도록 localStorage에 저장한다
+const BUILDER_STORAGE = 'lol_teamtool:builder:v1';
+
+interface SavedBuilderState {
+    theme?: 'light' | 'dark';
+    allPlayers?: Player[];
+    lanes?: Partial<LanesState>;
+}
+
+const loadSavedState = (): SavedBuilderState => {
+    try {
+        return JSON.parse(localStorage.getItem(BUILDER_STORAGE) ?? '{}') as SavedBuilderState;
+    } catch {
+        return {};
+    }
+};
+
+const saved = loadSavedState();
 
 export const useTeamBuilderLogic = () => {
-    const [theme, setTheme] = useState('dark');
-    const [allPlayers, setAllPlayers] = useState([]);
+    const [theme, setTheme] = useState<'light' | 'dark'>(saved.theme === 'light' ? 'light' : 'dark');
+    const [allPlayers, setAllPlayers] = useState<Player[]>(Array.isArray(saved.allPlayers) ? saved.allPlayers : []);
     const [inputValue, setInputValue] = useState('');
-    const [lanes, setLanes] = useState(initialLanes);
-    const [dragOverTarget, setDragOverTarget] = useState(null);
-    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, targetName: null });
-    const lanesRef = useRef(null);
+    const [lanes, setLanes] = useState<LanesState>(saved.lanes ? { ...cloneLanes(initialLanes), ...saved.lanes } : initialLanes);
+
+    useEffect(() => {
+        localStorage.setItem(BUILDER_STORAGE, JSON.stringify({ theme, allPlayers, lanes }));
+    }, [theme, allPlayers, lanes]);
+    const [dragOverTarget, setDragOverTarget] = useState<DragTarget | null>(null);
+    const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, targetName: null });
+    const lanesRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         const handleClick = () => setContextMenu({ visible: false, x: 0, y: 0, targetName: null });
@@ -24,14 +58,14 @@ export const useTeamBuilderLogic = () => {
 
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
-    const handleInputChange = (e) => setInputValue(e.target.value);
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value);
 
-    const handleInputSubmit = (e) => {
-        if (e.key === 'Enter' && e.target.value.trim() !== '') {
-            const newNames = e.target.value.trim().split(/\s+/);
+    const handleInputSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+            const newNames = e.currentTarget.value.trim().split(/\s+/);
             setAllPlayers(prevPlayers => {
                 const existingNames = prevPlayers.map(p => p.name);
-                const newPlayers = newNames
+                const newPlayers: Player[] = newNames
                     .filter(name => !existingNames.includes(name))
                     .map(name => ({ name, tier: '중' }));
                 return [...prevPlayers, ...newPlayers];
@@ -40,16 +74,27 @@ export const useTeamBuilderLogic = () => {
         }
     };
 
-    const handleContextMenu = (e, name) => {
+    /** 내전 기록 탭의 참가자 명단을 팀 빌더 풀로 불러온다 */
+    const importPlayers = (names: string[]) => {
+        setAllPlayers(prev => {
+            const existing = prev.map(p => p.name);
+            const added: Player[] = names
+                .filter(name => name.trim() !== '' && !existing.includes(name))
+                .map(name => ({ name, tier: '중' }));
+            return [...prev, ...added];
+        });
+    };
+
+    const handleContextMenu = (e: React.MouseEvent, name: string) => {
         e.preventDefault();
         setContextMenu({ visible: true, x: e.pageX, y: e.pageY, targetName: name });
     };
 
-    const handleDeletePlayer = (nameToDelete) => {
+    const handleDeletePlayer = (nameToDelete: string) => {
         setAllPlayers(prev => prev.filter(p => p.name !== nameToDelete));
         setLanes(prev => {
-            const newLanes = JSON.parse(JSON.stringify(prev));
-            for (const pos in newLanes) {
+            const newLanes = cloneLanes(prev);
+            for (const pos of POSITIONS) {
                 if (newLanes[pos].name1 === nameToDelete) newLanes[pos].name1 = null;
                 if (newLanes[pos].name2 === nameToDelete) newLanes[pos].name2 = null;
             }
@@ -57,15 +102,15 @@ export const useTeamBuilderLogic = () => {
         });
     };
 
-    const setPlayerTier = (name, tier) => {
+    const setPlayerTier = (name: string, tier: Tier | null) => {
         setAllPlayers(prev => prev.map(p => p.name === name ? { ...p, tier } : p));
     };
 
     const handleRandomizeSides = () => {
         if (Math.random() < 0.5) return;
         setLanes(prevLanes => {
-            const newLanes = JSON.parse(JSON.stringify(prevLanes));
-            for (const pos in newLanes) {
+            const newLanes = cloneLanes(prevLanes);
+            for (const pos of POSITIONS) {
                 const { name1, name2, operator } = newLanes[pos];
                 newLanes[pos] = {
                     name1: name2,
@@ -89,7 +134,7 @@ export const useTeamBuilderLogic = () => {
             p => !playersInLanes.includes(p.name)
         );
 
-        const emptySlots = [];
+        const emptySlots: { position: Position; slot: SlotKey }[] = [];
         POSITIONS.forEach(pos => {
             if (lanes[pos].name1 === null) {
                 emptySlots.push({ position: pos, slot: 'name1' });
@@ -111,31 +156,32 @@ export const useTeamBuilderLogic = () => {
         const slotToFill = emptySlots[randomSlotIndex];
 
         setLanes(prevLanes => {
-            const newLanes = JSON.parse(JSON.stringify(prevLanes)); // 깊은 복사
+            const newLanes = cloneLanes(prevLanes);
             const { position, slot } = slotToFill;
             newLanes[position][slot] = playerToAssign.name;
             return newLanes;
         });
     };
 
-    const onDragStart = (e, item) => {
+    const onDragStart = (e: React.DragEvent, item: DraggedItem) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", JSON.stringify(item));
     };
 
-    const onDragOver = (e, target) => { e.preventDefault(); setDragOverTarget(target); };
+    const onDragOver = (e: React.DragEvent, target: DragTarget) => { e.preventDefault(); setDragOverTarget(target); };
     const onDragLeave = () => setDragOverTarget(null);
 
-    const onDrop = (e, target) => {
+    const onDrop = (e: React.DragEvent, target: DragTarget) => {
         e.preventDefault();
         setDragOverTarget(null);
-        const dragged = JSON.parse(e.dataTransfer.getData("text/plain"));
+        const dragged = JSON.parse(e.dataTransfer.getData("text/plain")) as DraggedItem;
 
         if (target.type === 'pool') {
             if (dragged.origin.type === 'slot') {
+                const { position, slot } = dragged.origin;
                 setLanes(prev => {
                     const newLanes = { ...prev };
-                    newLanes[dragged.origin.position][dragged.origin.slot] = null;
+                    newLanes[position][slot] = null;
                     return newLanes;
                 });
             }
@@ -152,10 +198,11 @@ export const useTeamBuilderLogic = () => {
 
             if (nameInTargetSlot) {
                 if (draggedOrigin.type === 'slot') {
+                    const { position: originPos, slot: originSlot } = draggedOrigin;
                     setLanes(prev => {
-                        const newLanes = JSON.parse(JSON.stringify(prev));
+                        const newLanes = cloneLanes(prev);
                         newLanes[position][slot] = draggedName;
-                        newLanes[draggedOrigin.position][draggedOrigin.slot] = nameInTargetSlot;
+                        newLanes[originPos][originSlot] = nameInTargetSlot;
                         return newLanes;
                     });
                 } else {
@@ -164,9 +211,10 @@ export const useTeamBuilderLogic = () => {
                 }
             } else {
                 if (draggedOrigin.type === 'slot') {
+                    const { position: originPos, slot: originSlot } = draggedOrigin;
                     setLanes(prev => {
                         const newLanes = { ...prev };
-                        newLanes[draggedOrigin.position][draggedOrigin.slot] = null;
+                        newLanes[originPos][originSlot] = null;
                         newLanes[position][slot] = draggedName;
                         return newLanes;
                     });
@@ -177,7 +225,7 @@ export const useTeamBuilderLogic = () => {
         }
     };
 
-    const handleOperatorClick = (position, event) => {
+    const handleOperatorClick = (position: Position, event: React.MouseEvent) => {
         event.preventDefault();
         const currentOperator = lanes[position].operator;
         const currentIndex = OPERATORS.indexOf(currentOperator);
@@ -190,7 +238,7 @@ export const useTeamBuilderLogic = () => {
         setLanes(prev => ({ ...prev, [position]: { ...prev[position], operator: OPERATORS[nextIndex] } }));
     };
 
-    const handleSwap = (position) => {
+    const handleSwap = (position: Position) => {
         setLanes(prev => {
             const currentLane = prev[position];
             const newOperator = currentLane.operator === '>' ? '<' : currentLane.operator === '<' ? '>' : '=';
@@ -200,9 +248,9 @@ export const useTeamBuilderLogic = () => {
 
     const playersInLanes = Object.values(lanes).flatMap(l => [l.name1, l.name2]).filter(Boolean);
     const playersInPool = allPlayers.filter(p => !playersInLanes.includes(p.name));
-    const findPlayer = (name) => allPlayers.find(p => p.name === name);
+    const findPlayer = (name: string) => allPlayers.find(p => p.name === name);
 
-    const tierLists = {
+    const tierLists: Record<Tier, Player[]> = {
         '상': playersInPool.filter(p => p.tier === '상'),
         '중': playersInPool.filter(p => p.tier === '중' || !p.tier),
         '하': playersInPool.filter(p => p.tier === '하'),
@@ -234,6 +282,7 @@ export const useTeamBuilderLogic = () => {
             handleSwap,
             findPlayer,
             handleRandomAssign,
+            importPlayers,
         }
     };
 };

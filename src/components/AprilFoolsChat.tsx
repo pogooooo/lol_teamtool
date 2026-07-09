@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTeamBuilderContext } from '../hooks/useTeamBuilderLogic';
 import { ChatSideContainer, ChatBubble } from '../App.styles';
 
@@ -49,9 +49,14 @@ const CHAT_TEMPLATES = [
     "중요한 건 꺽이지 않는 {name}"
 ];
 
+interface ChatMessage {
+    id: number;
+    message: string;
+}
+
 export const AprilFoolsChat = () => {
     const { allPlayers } = useTeamBuilderContext();
-    const [chats, setChats] = useState([]);
+    const [chats, setChats] = useState<ChatMessage[]>([]);
 
     // const isAprilFoolsWeek = () => true;
 
@@ -94,6 +99,7 @@ export const AprilFoolsChat = () => {
         }, Math.random() * 2000 + 800);
 
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [allPlayers]);
 
     if (!isAprilFoolsWeek()) return null;

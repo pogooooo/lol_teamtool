@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTheme } from 'styled-components';
 import { useTeamBuilderContext } from '../hooks/useTeamBuilderLogic';
 import { TieredNamePoolContainer, TierRow, TierLabel, DraggableName } from '../App.styles';

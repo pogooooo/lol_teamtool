@@ -1,4 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+
+declare global {
+    interface Window {
+        adsbygoogle?: unknown[];
+    }
+}
 
 export const AdSense = () => {
     useEffect(() => {
@@ -10,7 +16,7 @@ export const AdSense = () => {
     }, []);
 
     return (
-        <div style={{ textAlign: 'center', margin: '20px 0', background: '#fff' }}>
+        <div style={{ textAlign: 'center', margin: '20px 0' }}>
             <ins className="adsbygoogle"
                  style={{ display: 'block' }}
                  data-ad-client="ca-pub-1494698073875494"

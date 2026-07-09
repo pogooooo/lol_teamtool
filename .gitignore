@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# 로컬 API 서버 (Riot 키·SQLite는 커밋 금지)
+.env
+server/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
