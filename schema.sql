@@ -74,6 +74,14 @@ CREATE TABLE IF NOT EXISTS tournament_codes (
     spectator_type TEXT NOT NULL,
     metadata       TEXT
 );
+CREATE TABLE IF NOT EXISTS feedback (
+    id         TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    message    TEXT NOT NULL,
+    contact    TEXT,
+    client_id  TEXT,
+    sent       INTEGER NOT NULL DEFAULT 0
+);
 CREATE INDEX IF NOT EXISTS idx_matches_group_start ON matches (group_id, game_start DESC);
 CREATE INDEX IF NOT EXISTS idx_participants_match  ON match_participants (match_id);
 CREATE INDEX IF NOT EXISTS idx_participants_player ON match_participants (player_id);

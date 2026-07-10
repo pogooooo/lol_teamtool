@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { Card, CompactButton } from '../../App.styles';
+import { computeDuoStats } from '../../services/matchStats';
 import { Select } from '../ui/Select';
 import { DatePicker } from '../ui/DatePicker';
 import type { Archive } from '../../hooks/useArchive';
@@ -32,6 +34,9 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
     const [to, setTo] = useState('');
     const [playerId, setPlayerId] = useState('');
     const [result, setResult] = useState<'all' | 'win' | 'lose'>('all');
+    const [partnerId, setPartnerId] = useState('');
+    const [pairMode, setPairMode] = useState<'same' | 'vs'>('same');
+    const [champion, setChampion] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [detail, setDetail] = useState<MatchFullDetail | null>(null);
@@ -49,9 +54,67 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
             if (!pt) return false;
             if (result === 'win' && pt.side !== m.winningSide) return false;
             if (result === 'lose' && pt.side === m.winningSide) return false;
+            // 챔피언 필터: 참가자가 선택돼 있으면 "그 참가자가 그 챔피언을 한 판"
+            if (champion && pt.champion !== champion) return false;
+            // 듀오/맞대결 필터: 두 번째 참가자가 같은 판에 있고 관계(같은 팀/상대 팀)가 일치해야 한다
+            if (partnerId) {
+                const pp = m.participants.find(p => p.playerId === partnerId);
+                if (!pp) return false;
+                if (pairMode === 'same' && pp.side !== pt.side) return false;
+                if (pairMode === 'vs' && pp.side === pt.side) return false;
+            }
+        } else if (champion && !m.participants.some(p => p.champion === champion)) {
+            // 참가자 미선택 시: "누구든 그 챔피언이 나온 판"
+            return false;
         }
         return true;
     });
+
+    /* --- 검색 결과 요약 (전체 필터 기준 승률) ---
+     * 참가자 선택 → 그 참가자 기준 승률
+     * 챔피언만 선택 → 그 챔피언 기준 승률 (블라인드 픽 미러전 대비 등장 인스턴스 단위 집계)
+     * 둘 다 없음 → 블루팀 승률 참고 표시
+     */
+    let summaryGames = filtered.length;
+    let summaryWins = 0;
+    if (playerId) {
+        summaryWins = filtered.filter(m => m.participants.find(p => p.playerId === playerId)?.side === m.winningSide).length;
+    } else if (champion) {
+        const instances = filtered.flatMap(m =>
+            m.participants.filter(p => p.champion === champion).map(p => p.side === m.winningSide));
+        summaryGames = instances.length;
+        summaryWins = instances.filter(Boolean).length;
+    } else {
+        summaryWins = filtered.filter(m => m.winningSide === 'blue').length;
+    }
+    const summaryRate = summaryGames === 0 ? 0 : Math.round((summaryWins / summaryGames) * 100);
+    const showRate = Boolean(playerId || champion); // 승/패/승률 배지를 보여줄 조건
+
+    const nameById = (id: string) => archive.players.find(p => p.id === id)?.displayName ?? '?';
+    const conditionText = [
+        playerId && nameById(playerId),
+        partnerId && `${pairMode === 'same' ? '+' : 'vs'} ${nameById(partnerId)}`,
+        champion && champLabel(champion),
+        result !== 'all' && (result === 'win' ? '승리한 판' : '패배한 판'),
+    ].filter(Boolean).join(' · ');
+
+    /* 챔피언 옵션: 기록에 실제로 등장한 챔피언만 (참가자 선택 시 그 참가자의 픽으로 좁힌다) */
+    const champMap = new Map<string, string>();
+    archive.matches.forEach(m => m.participants.forEach(pt => {
+        if (!playerId || pt.playerId === playerId) champMap.set(pt.champion, champLabel(pt.champion));
+    }));
+    const champOptions = [...champMap.entries()]
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+    /* 듀오 승률 랭킹 (전체 기록 기준) — 우측 여백 패널에 표시 */
+    const duoStats = computeDuoStats(archive.matches, archive.players);
+
+    const hasFilter = Boolean(from || to || playerId || partnerId || champion || result !== 'all');
+    const resetFilters = () => {
+        setFrom(''); setTo(''); setPlayerId(''); setResult('all');
+        setPartnerId(''); setPairMode('same'); setChampion(''); setPage(1);
+    };
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
@@ -137,14 +200,23 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
 
     return (
         <ListCard>
-            <h3>내전 목록</h3>
+            <HeadRow>
+                <h3>내전 목록</h3>
+                <CountChip className="tabular">{filtered.length}판</CountChip>
+            </HeadRow>
 
             <FilterBar>
                 <DatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} placeholder="시작일" />
                 <DatePicker value={to} onChange={v => { setTo(v); setPage(1); }} placeholder="종료일" />
                 <Select
                     value={playerId}
-                    onChange={v => { setPlayerId(v); setResult('all'); setPage(1); }}
+                    onChange={v => {
+                        setPlayerId(v);
+                        setResult('all');
+                        setChampion('');
+                        if (!v || v === partnerId) setPartnerId('');
+                        setPage(1);
+                    }}
                     options={[
                         { value: '', label: '참가자 전체' },
                         ...archive.players.map(p => ({ value: p.id, label: p.displayName })),
@@ -161,7 +233,54 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
                         { value: 'lose', label: '패배한 판' },
                     ]}
                 />
+                <Select
+                    value={partnerId}
+                    onChange={v => { setPartnerId(v); setPage(1); }}
+                    disabled={!playerId}
+                    title={playerId ? '함께 검색할 두 번째 참가자' : '참가자를 먼저 선택하세요'}
+                    options={[
+                        { value: '', label: '함께한 참가자' },
+                        ...archive.players.filter(p => p.id !== playerId).map(p => ({ value: p.id, label: p.displayName })),
+                    ]}
+                />
+                <Select
+                    value={pairMode}
+                    onChange={v => { setPairMode(v as 'same' | 'vs'); setPage(1); }}
+                    disabled={!partnerId}
+                    title={partnerId ? '' : '함께한 참가자를 먼저 선택하세요'}
+                    options={[
+                        { value: 'same', label: '같은 팀으로' },
+                        { value: 'vs', label: '상대 팀으로' },
+                    ]}
+                />
+                <Select
+                    value={champion}
+                    onChange={v => { setChampion(v); setPage(1); }}
+                    title={playerId ? '선택한 참가자가 플레이한 챔피언' : '누구든 이 챔피언이 나온 판'}
+                    options={[{ value: '', label: '챔피언 전체' }, ...champOptions]}
+                />
+                <ResetButton onClick={resetFilters} disabled={!hasFilter}>필터 초기화</ResetButton>
             </FilterBar>
+
+            {archive.matches.length > 0 && (
+                <SummaryBar>
+                    <b className="tabular">{summaryGames}판</b>
+                    {showRate ? (
+                        summaryGames > 0 && (
+                            <>
+                                <span className="tabular win">{summaryWins}승</span>
+                                <span className="tabular lose">{summaryGames - summaryWins}패</span>
+                                <RateBadge $good={summaryRate >= 50} className="tabular">승률 {summaryRate}%</RateBadge>
+                            </>
+                        )
+                    ) : (
+                        summaryGames > 0 && (
+                            <span className="hint tabular">블루팀 승률 {summaryRate}%</span>
+                        )
+                    )}
+                    {conditionText && <span className="cond">{conditionText}</span>}
+                </SummaryBar>
+            )}
 
             {filtered.length === 0 ? (
                 <Empty>
@@ -179,37 +298,42 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
                         const redKills = teamKills(m.participants, 'red');
                         return (
                             <RowWrap key={m.id} $side={m.winningSide}>
-                                <MatchRow $expanded={expanded} onClick={() => setExpandedId(expanded ? null : m.id)}>
-                                    <ResultCol>
+                                <MatchRow $expanded={expanded} $side={m.winningSide} onClick={() => setExpandedId(expanded ? null : m.id)}>
+                                    <MetaCol>
                                         <WinBadge $side={m.winningSide}>
                                             {m.winningSide === 'blue' ? '블루 승' : '레드 승'}
                                         </WinBadge>
-                                        <ScoreLine className="tabular">
-                                            <b className={m.winningSide === 'blue' ? 'win blue' : 'blue'}>{blueKills}</b>
-                                            <span>:</span>
-                                            <b className={m.winningSide === 'red' ? 'win red' : 'red'}>{redKills}</b>
-                                        </ScoreLine>
                                         <span className="sub">{fmtDate(m.gameStart)} · {Math.floor(m.durationSec / 60)}분</span>
                                         {m.source === 'demo' && <DemoBadge>모의</DemoBadge>}
-                                    </ResultCol>
+                                    </MetaCol>
 
-                                    <TeamCol $side="blue" $won={m.winningSide === 'blue'}>
+                                    <TeamPicks $side="blue">
                                         {blue.map(pt => (
-                                            <PickLine key={pt.puuid + pt.position}>
-                                                <ChampionIcon championId={pt.champion} name={champLabel(pt.champion)} size={20} />
+                                            <Pick key={pt.puuid + pt.position} $won={m.winningSide === 'blue'}>
+                                                <IconRing $side="blue" $won={m.winningSide === 'blue'}>
+                                                    <ChampionIcon championId={pt.champion} name={champLabel(pt.champion)} size={30} />
+                                                </IconRing>
                                                 <span className="nick">{nickOf(pt)}</span>
-                                            </PickLine>
+                                            </Pick>
                                         ))}
-                                    </TeamCol>
-                                    <VsBadge aria-hidden>VS</VsBadge>
-                                    <TeamCol $side="red" $won={m.winningSide === 'red'}>
+                                    </TeamPicks>
+
+                                    <ScoreCol className="tabular" aria-label="킬 스코어">
+                                        <b className={m.winningSide === 'blue' ? 'win blue' : 'blue'}>{blueKills}</b>
+                                        <span className="sep">:</span>
+                                        <b className={m.winningSide === 'red' ? 'win red' : 'red'}>{redKills}</b>
+                                    </ScoreCol>
+
+                                    <TeamPicks $side="red">
                                         {red.map(pt => (
-                                            <PickLine key={pt.puuid + pt.position}>
-                                                <ChampionIcon championId={pt.champion} name={champLabel(pt.champion)} size={20} />
+                                            <Pick key={pt.puuid + pt.position} $won={m.winningSide === 'red'}>
+                                                <IconRing $side="red" $won={m.winningSide === 'red'}>
+                                                    <ChampionIcon championId={pt.champion} name={champLabel(pt.champion)} size={30} />
+                                                </IconRing>
                                                 <span className="nick">{nickOf(pt)}</span>
-                                            </PickLine>
+                                            </Pick>
                                         ))}
-                                    </TeamCol>
+                                    </TeamPicks>
 
                                     <Chevron aria-hidden>{expanded ? '▲' : '▼'}</Chevron>
                                 </MatchRow>
@@ -250,6 +374,42 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
                     onClose={() => setDetail(null)}
                 />
             )}
+
+            {/* 초와이드 화면 전용 사이드 패널 — 본문(800px)·광고(±560px) 바깥 여백을 활용한다 */}
+            {createPortal(
+                <>
+                    <SideFloat $pos="left">
+                        <h4>검색 결과</h4>
+                        <BigStat className="tabular">{summaryGames}<small>판</small></BigStat>
+                        {showRate && summaryGames > 0 && (
+                            <>
+                                <SideLine>
+                                    <span className="tabular win">{summaryWins}승</span>
+                                    <span className="tabular lose">{summaryGames - summaryWins}패</span>
+                                </SideLine>
+                                <RateBadge $good={summaryRate >= 50} className="tabular">승률 {summaryRate}%</RateBadge>
+                            </>
+                        )}
+                        <p className="cond">{conditionText || '필터를 선택하면 조건별 승률이 표시됩니다.'}</p>
+                    </SideFloat>
+                    <SideFloat $pos="right">
+                        <h4>듀오 승률 랭킹</h4>
+                        {duoStats.length === 0 ? (
+                            <p className="cond">같은 팀으로 2판 이상 뛴 듀오가 생기면 표시됩니다.</p>
+                        ) : (
+                            duoStats.slice(0, 10).map((d, i) => (
+                                <DuoLine key={d.key}>
+                                    <span className="rank tabular">{i + 1}</span>
+                                    <span className="names">{d.aName} · {d.bName}</span>
+                                    <span className="rate tabular">{d.winRate}%</span>
+                                    <small className="tabular">{d.games}판</small>
+                                </DuoLine>
+                            ))
+                        )}
+                    </SideFloat>
+                </>,
+                document.body,
+            )}
         </ListCard>
     );
 };
@@ -259,13 +419,29 @@ const ListCard = styled(Card)`
     flex-direction: column;
     gap: 0.75rem;
     min-height: 320px;
+`;
+
+const HeadRow = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid ${({ theme }) => theme.cardBorder};
 
     h3 {
         font-size: 1.1rem;
         color: ${({ theme }) => theme.text};
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid ${({ theme }) => theme.cardBorder};
     }
+`;
+
+const CountChip = styled.span`
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: ${({ theme }) => theme.accent};
+    background: ${({ theme }) => theme.body};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
 `;
 
 const FilterBar = styled.div`
@@ -281,6 +457,113 @@ const FilterBar = styled.div`
     @media (max-width: 640px) {
         grid-template-columns: 1fr 1fr;
     }
+`;
+
+const ResetButton = styled.button`
+    padding: 0.4rem 0.6rem;
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: ${({ theme }) => theme.placeholder};
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { background: ${({ theme }) => theme.dragOver}; color: ${({ theme }) => theme.text}; }
+    &:disabled { opacity: 0.4; cursor: default; }
+`;
+
+/* 필터 결과 요약 — 조건이 걸린 전체 검색 결과의 승률을 항상 보여준다 */
+const SummaryBar = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-md);
+    background: ${({ theme }) => theme.body};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    font-size: 0.82rem;
+    color: ${({ theme }) => theme.text};
+
+    b { font-size: 0.95rem; }
+    .win { color: ${({ theme }) => theme.teamBlue}; font-weight: 700; }
+    .lose { color: ${({ theme }) => theme.teamRed}; font-weight: 700; }
+    .hint { color: ${({ theme }) => theme.placeholder}; }
+    .cond {
+        margin-left: auto;
+        font-size: 0.75rem;
+        color: ${({ theme }) => theme.placeholder};
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+`;
+
+const RateBadge = styled.span<{ $good: boolean }>`
+    padding: 0.12rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    background: ${({ theme, $good }) => ($good ? theme.teamBlue : theme.teamRed)};
+`;
+
+/* 본문 밖 좌우 여백의 플로팅 패널 — 광고(중앙 ±573px)와 겹치지 않도록 1640px 이상에서만 노출 */
+const SideFloat = styled.aside<{ $pos: 'left' | 'right' }>`
+    display: none;
+    position: fixed;
+    top: 96px;
+    ${({ $pos }) => ($pos === 'left' ? 'right: calc(50% + 592px);' : 'left: calc(50% + 592px);')}
+    width: 212px;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: var(--radius-lg);
+    background: ${({ theme }) => theme.card};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+
+    h4 {
+        font-size: 0.85rem;
+        color: ${({ theme }) => theme.text};
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid ${({ theme }) => theme.cardBorder};
+    }
+
+    .cond { font-size: 0.75rem; color: ${({ theme }) => theme.placeholder}; line-height: 1.5; }
+    .win { color: ${({ theme }) => theme.teamBlue}; font-weight: 700; }
+    .lose { color: ${({ theme }) => theme.teamRed}; font-weight: 700; }
+
+    @media (min-width: 1640px) {
+        display: flex;
+    }
+`;
+
+const BigStat = styled.span`
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: ${({ theme }) => theme.accent};
+
+    small { font-size: 0.85rem; font-weight: 600; margin-left: 2px; color: ${({ theme }) => theme.placeholder}; }
+`;
+
+const SideLine = styled.div`
+    display: flex;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+`;
+
+const DuoLine = styled.div`
+    display: grid;
+    grid-template-columns: 16px 1fr auto auto;
+    gap: 0.35rem;
+    align-items: baseline;
+    font-size: 0.78rem;
+    color: ${({ theme }) => theme.text};
+
+    .rank { font-weight: 800; color: ${({ theme }) => theme.placeholder}; }
+    .names { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rate { font-weight: 800; color: ${({ theme }) => theme.accent}; }
+    small { color: ${({ theme }) => theme.placeholder}; font-size: 0.68rem; }
 `;
 
 const Empty = styled.div`
@@ -300,32 +583,47 @@ const Rows = styled.div`
     gap: 0.5rem;
 `;
 
-/* 왼쪽 컬러 스트립 = 승리 팀 색 */
+/* 승리 팀 방향에서 팀 색이 번지는 그라데이션 카드 — 호버 시 살짝 떠오른다 */
 const RowWrap = styled.div<{ $side: TeamSide }>`
     border: 1px solid ${({ theme }) => theme.cardBorder};
-    border-left: 4px solid ${({ theme, $side }) => ($side === 'blue' ? theme.teamBlue : theme.teamRed)};
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+        border-color: ${({ theme, $side }) =>
+            `color-mix(in srgb, ${$side === 'blue' ? theme.teamBlue : theme.teamRed} 45%, ${theme.cardBorder})`};
+    }
 `;
 
-const MatchRow = styled.button<{ $expanded?: boolean }>`
+const MatchRow = styled.button<{ $expanded?: boolean; $side: TeamSide }>`
     width: 100%;
     display: grid;
-    grid-template-columns: 92px 1fr 28px 1fr 16px;
-    gap: 0.5rem;
+    grid-template-columns: 92px 1fr auto 1fr 16px;
+    gap: 0.6rem;
     align-items: center;
-    padding: 0.6rem 0.75rem;
-    background: ${({ theme, $expanded }) => ($expanded ? theme.dragOver : theme.body)};
+    padding: 0.7rem 0.8rem;
     border: none;
     color: ${({ theme }) => theme.text};
     cursor: pointer;
     text-align: left;
-    transition: background-color 0.15s ease;
+    background: ${({ theme, $expanded, $side }) => {
+        const color = $side === 'blue' ? theme.teamBlue : theme.teamRed;
+        const base = $expanded ? theme.dragOver : theme.body;
+        const dir = $side === 'blue' ? '90deg' : '270deg';
+        return `linear-gradient(${dir}, color-mix(in srgb, ${color} 13%, ${base}) 0%, ${base} 50%)`;
+    }};
 
-    &:hover { background: ${({ theme }) => theme.dragOver}; }
+    @media (max-width: 640px) {
+        grid-template-columns: 70px 1fr auto 1fr;
+        gap: 0.35rem;
+        padding: 0.55rem 0.55rem;
+    }
 `;
 
-const ResultCol = styled.span`
+const MetaCol = styled.span`
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -334,26 +632,23 @@ const ResultCol = styled.span`
     .sub { font-size: 0.72rem; color: ${({ theme }) => theme.placeholder}; }
 `;
 
-const ScoreLine = styled.span`
+/* 중앙 킬 스코어 — 승리 팀 숫자만 선명하게 */
+const ScoreCol = styled.span`
     display: flex;
     align-items: baseline;
-    gap: 0.3rem;
-    font-size: 1.15rem;
+    gap: 0.35rem;
+    padding: 0 0.3rem;
+    font-size: 1.4rem;
 
-    span { color: ${({ theme }) => theme.placeholder}; font-size: 0.85rem; }
-    b { font-weight: 800; opacity: 0.55; }
+    .sep { color: ${({ theme }) => theme.placeholder}; font-size: 0.9rem; }
+    b { font-weight: 800; opacity: 0.45; }
     b.blue { color: ${({ theme }) => theme.teamBlue}; }
     b.red { color: ${({ theme }) => theme.teamRed}; }
     b.win { opacity: 1; }
-`;
 
-const VsBadge = styled.span`
-    align-self: center;
-    text-align: center;
-    font-size: 0.68rem;
-    font-weight: 800;
-    color: ${({ theme }) => theme.placeholder};
-    letter-spacing: 0.05em;
+    @media (max-width: 640px) {
+        font-size: 1.05rem;
+    }
 `;
 
 const WinBadge = styled.span<{ $side: TeamSide }>`
@@ -374,44 +669,63 @@ const DemoBadge = styled.span`
     border: 1px dashed ${({ theme }) => theme.placeholder};
 `;
 
-/* 팀별 세로 픽 목록 (챔피언 + 닉네임) — 승리 팀은 팀 색으로 은은하게 강조 */
-const TeamCol = styled.span<{ $side: TeamSide; $won?: boolean }>`
+/* 팀별 가로 아바타 스택 — 양 팀 픽이 중앙 스코어를 향해 정렬된다 */
+const TeamPicks = styled.span<{ $side: TeamSide }>`
     display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-    padding: 0.4rem 0.5rem;
-    border-radius: var(--radius-sm);
-    background: ${({ theme, $side, $won }) => {
-        const color = $side === 'blue' ? theme.teamBlue : theme.teamRed;
-        return `color-mix(in srgb, ${color} ${$won ? 13 : 6}%, transparent)`;
-    }};
-    border: 1px solid ${({ theme, $side, $won }) => {
-        const color = $side === 'blue' ? theme.teamBlue : theme.teamRed;
-        return $won ? `color-mix(in srgb, ${color} 45%, transparent)` : 'transparent';
-    }};
-`;
-
-const PickLine = styled.span`
-    display: flex;
-    align-items: center;
+    justify-content: ${({ $side }) => ($side === 'blue' ? 'flex-end' : 'flex-start')};
     gap: 0.4rem;
     min-width: 0;
+    overflow: hidden;
+
+    @media (max-width: 640px) {
+        gap: 2px;
+
+        /* 모바일은 아이콘만 축소 표시 */
+        img, span[title] { width: 24px; height: 24px; }
+        .nick { display: none; }
+    }
+`;
+
+/* 챔피언 + 닉네임 세로 배치 — 패배 팀은 살짝 흐리게. 공간이 좁으면 잘리는 대신 줄어든다 */
+const Pick = styled.span<{ $won: boolean }>`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex: 0 1 54px;
+    min-width: 38px;
+    opacity: ${({ $won }) => ($won ? 1 : 0.68)};
 
     .nick {
-        font-size: 0.76rem;
-        font-weight: 500;
+        width: 100%;
+        font-size: 0.67rem;
+        font-weight: ${({ $won }) => ($won ? 600 : 500)};
         color: ${({ theme }) => theme.text};
+        text-align: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 `;
 
+/* 승리 팀 챔피언에 팀 색 링 — 링이 레이아웃 안에 포함되도록 padding 방식 (box-shadow는 overflow에 잘림) */
+const IconRing = styled.span<{ $side: TeamSide; $won: boolean }>`
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 50%;
+    line-height: 0;
+    background: ${({ theme, $side, $won }) =>
+        $won ? ($side === 'blue' ? theme.teamBlue : theme.teamRed) : 'transparent'};
+`;
+
 const Chevron = styled.span`
     color: ${({ theme }) => theme.placeholder};
     font-size: 0.7rem;
     text-align: center;
+
+    @media (max-width: 640px) {
+        display: none;
+    }
 `;
 
 const Expansion = styled.div`

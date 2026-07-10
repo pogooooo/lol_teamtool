@@ -7,6 +7,7 @@ import { generateDemoMatch } from '../services/riot';
 import * as api from '../services/api';
 import { sortRankings, winRateOf } from '../services/api';
 import type { PlayerRanking } from '../services/api';
+import { computeDuoStats } from '../services/matchStats';
 import { GroupGate } from './history/GroupGate';
 import { PlayerManager } from './history/PlayerManager';
 import { HelpSection } from './history/HelpSection';
@@ -23,7 +24,7 @@ export const MatchHistory = () => {
     const [subView, setSubView] = useState<'dashboard' | 'roster'>('dashboard');
     const [codeStatus, setCodeStatus] = useState('복사');
     const [rankings, setRankings] = useState<PlayerRanking[]>([]);
-    const [rankMode, setRankMode] = useState<'games' | 'winrate'>('games');
+    const [rankMode, setRankMode] = useState<'games' | 'winrate' | 'duo'>('games');
     const [showRanking, setShowRanking] = useState(false);
     const [showSend, setShowSend] = useState(false);
     const [sendStatus, setSendStatus] = useState('');
@@ -100,7 +101,8 @@ export const MatchHistory = () => {
         archive.importMatches([generateDemoMatch(group.id, archive.players, archive.accounts)]);
     };
 
-    const top3 = sortRankings(rankings, rankMode).slice(0, 3);
+    const top3 = sortRankings(rankings, rankMode === 'duo' ? 'games' : rankMode).slice(0, 3);
+    const duoTop3 = computeDuoStats(archive.matches, archive.players).slice(0, 3);
 
     return (
         <HistoryContainer>
@@ -124,9 +126,22 @@ export const MatchHistory = () => {
                         <RankHead>
                             <ToggleMini $active={rankMode === 'games'} onClick={() => setRankMode('games')}>출전</ToggleMini>
                             <ToggleMini $active={rankMode === 'winrate'} onClick={() => setRankMode('winrate')}>승률</ToggleMini>
+                            <ToggleMini $active={rankMode === 'duo'} onClick={() => setRankMode('duo')} title="같은 팀으로 2판 이상 뛴 듀오의 승률 순위">듀오</ToggleMini>
                             <ArrowMore onClick={() => setShowRanking(true)} title="전체 순위 보기">전체 →</ArrowMore>
                         </RankHead>
-                        {top3.length === 0 ? (
+                        {rankMode === 'duo' ? (
+                            duoTop3.length === 0 ? (
+                                <small className="empty">같은 팀 2판 이상 듀오가 아직 없습니다</small>
+                            ) : (
+                                duoTop3.map((d, i) => (
+                                    <RankLine key={d.key}>
+                                        <span className="rank">{i + 1}</span>
+                                        <span className="name" title={`${d.aName} · ${d.bName} — ${d.games}판 ${d.wins}승`}>{d.aName}·{d.bName}</span>
+                                        <span className="val tabular">{d.winRate}%</span>
+                                    </RankLine>
+                                ))
+                            )
+                        ) : top3.length === 0 ? (
                             <small className="empty">아직 기록이 없습니다</small>
                         ) : (
                             top3.map((r, i) => (
@@ -174,7 +189,7 @@ export const MatchHistory = () => {
             <HelpSection />
 
             {showRanking && (
-                <RankingModal ranking={rankings} initialMode={rankMode} onClose={() => setShowRanking(false)} />
+                <RankingModal ranking={rankings} initialMode={rankMode === 'duo' ? 'winrate' : rankMode} onClose={() => setShowRanking(false)} />
             )}
             {showSend && (
                 <SendToBuilderModal
@@ -344,7 +359,6 @@ const RankLine = styled.div`
 const GrassCard = styled(Card)`
     display: flex;
     align-items: center;
-    justify-content: center;
     padding: 0.75rem 1rem;
 `;
 

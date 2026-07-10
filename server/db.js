@@ -92,6 +92,14 @@ CREATE TABLE IF NOT EXISTS tournament_codes (
     spectator_type TEXT NOT NULL,
     metadata       TEXT
 );
+CREATE TABLE IF NOT EXISTS feedback (
+    id         TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    message    TEXT NOT NULL,
+    contact    TEXT,
+    client_id  TEXT,
+    sent       INTEGER NOT NULL DEFAULT 0
+);
 CREATE INDEX IF NOT EXISTS idx_matches_group_start ON matches (group_id, game_start DESC);
 CREATE INDEX IF NOT EXISTS idx_participants_match  ON match_participants (match_id);
 CREATE INDEX IF NOT EXISTS idx_participants_player ON match_participants (player_id);
@@ -371,6 +379,12 @@ export const saveTournamentCodes = (groupId, codes, params) => {
         st.run(code, groupId, now, params.teamSize, params.pickType, params.mapType, params.spectatorType, params.metadata ?? '');
     }
 };
+
+/* --- 문의/건의 --- */
+
+export const addFeedback = ({ id, message, contact, clientId, sent }) =>
+    db.prepare('INSERT INTO feedback (id, created_at, message, contact, client_id, sent) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(id, Date.now(), message, contact || null, clientId || null, sent ? 1 : 0);
 
 /** 요약 통계 — 출전 횟수 등 고정 집계는 SQL로 계산 */
 export const groupStats = (groupId) => {

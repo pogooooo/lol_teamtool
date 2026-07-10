@@ -127,18 +127,24 @@ const NavButton = styled.button`
     &:disabled { opacity: 0.35; cursor: default; }
 `;
 
+/* 카드 가로폭을 가득 채우도록 26주 컬럼을 1fr로 늘린다 — 셀은 aspect-ratio로 정사각형 유지 */
 const Grid = styled.div`
+    width: 100%;
     display: grid;
-    grid-template-rows: repeat(7, 13px);
+    grid-template-columns: repeat(${VIEW_WEEKS}, 1fr);
+    grid-template-rows: repeat(7, auto);
     grid-auto-flow: column;
-    grid-auto-columns: 13px;
-    gap: 2px;
+    gap: clamp(2px, 0.3vw, 4px);
 `;
 
 const Cell = styled.span<{ $level: number }>`
-    width: 13px;
-    height: 13px;
-    border-radius: 3px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    border-radius: 22%;
+    transition: transform 0.1s ease;
+
+    &:hover { transform: scale(1.25); }
     background: ${({ theme, $level }) => {
         switch ($level) {
             case -1: return 'transparent';

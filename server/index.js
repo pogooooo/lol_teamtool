@@ -533,6 +533,33 @@ app.post('/api/tournament/codes/:code/collect', async (req, res) => {
     }
 });
 
+/*
+ * --- 문의/건의 ---
+ * 로컬 SQLite에 저장하고, FormSubmit 무료 릴레이로 운영자 메일로 전달한다 (functions/api와 동일).
+ */
+const FEEDBACK_EMAIL = 'pogooo1103@gmail.com';
+
+app.post('/api/feedback', async (req, res) => {
+    const message = String(req.body?.message ?? '').trim().slice(0, 2000);
+    const contact = String(req.body?.contact ?? '').trim().slice(0, 200);
+    if (!message) return res.status(400).json({ error: '내용을 입력해 주세요.' });
+
+    let sent = false;
+    try {
+        const { default: axios } = await import('axios');
+        const r = await axios.post(`https://formsubmit.co/ajax/${FEEDBACK_EMAIL}`, {
+            _subject: '[내전팟] 문의/건의',
+            _template: 'box',
+            message,
+            contact: contact || '(미기재)',
+        }, { timeout: 8000, headers: { Accept: 'application/json' } });
+        sent = r.status >= 200 && r.status < 300;
+    } catch { /* 릴레이 실패해도 저장은 유지 */ }
+
+    store.addFeedback({ id: randomUUID(), message, contact, clientId: clientIdOf(req), sent });
+    res.json({ ok: true });
+});
+
 /* --- 에러 처리 --- */
 
 app.use((err, _req, res, _next) => {

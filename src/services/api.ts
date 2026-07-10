@@ -99,6 +99,10 @@ export const errorMessage = (e: unknown): string => {
 export const health = () =>
     client.get<{ ok: boolean; riotKeyConfigured: boolean }>('/health').then(r => r.data);
 
+/** 문의/건의 전송 — 서버가 저장 후 운영자 메일로 전달한다 */
+export const sendFeedback = (message: string, contact: string) =>
+    client.post<{ ok: boolean }>('/feedback', { message, contact });
+
 /* --- 그룹 --- */
 export const listGroups = () => client.get<Group[]>('/groups').then(r => r.data);
 export const createGroup = (name: string) => client.post<Group>('/groups', { name }).then(r => r.data);

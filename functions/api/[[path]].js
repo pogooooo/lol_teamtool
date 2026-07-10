@@ -508,6 +508,62 @@ on('POST', '/tournament/codes/:code/collect', async ({ store, riot, params }) =>
     }
 });
 
+/*
+ * --- 문의/건의 ---
+ * D1에 먼저 저장(유실 방지)하고, 무료 메일 릴레이로 운영자 메일로 전달한다.
+ * 1순위 Web3Forms(시크릿 WEB3FORMS_KEY 필요) → 2순위 FormSubmit. 릴레이가 모두
+ * 실패해도 저장은 되므로 사용자는 항상 성공 응답을 받는다.
+ */
+const FEEDBACK_EMAIL = 'pogooo1103@gmail.com';
+
+const forwardFeedback = async (env, message, contact) => {
+    // 1순위: Web3Forms — 안정적이지만 액세스 키 필요
+    if (env.WEB3FORMS_KEY) {
+        try {
+            const res = await fetch('https://api.web3forms.com/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    access_key: env.WEB3FORMS_KEY,
+                    subject: '[내전팟] 문의/건의',
+                    from_name: '내전팟 문의',
+                    message: `${message}\n\n— 답장 연락처: ${contact || '(미기재)'}`,
+                }),
+                signal: AbortSignal.timeout(8000),
+            });
+            const data = await res.json().catch(() => null);
+            if (res.ok && data?.success) return true;
+        } catch { /* 아래 FormSubmit으로 폴백 */ }
+    }
+    // 2순위: FormSubmit — 키가 필요 없지만 간헐적으로 불안정
+    try {
+        const res = await fetch(`https://formsubmit.co/ajax/${FEEDBACK_EMAIL}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                _subject: '[내전팟] 문의/건의',
+                _template: 'box',
+                message,
+                contact: contact || '(미기재)',
+            }),
+            signal: AbortSignal.timeout(8000),
+        });
+        const data = await res.json().catch(() => null);
+        return res.ok && String(data?.success) === 'true';
+    } catch {
+        return false;
+    }
+};
+
+on('POST', '/feedback', async ({ store, env, body, clientId }) => {
+    const message = String(body?.message ?? '').trim().slice(0, 2000);
+    const contact = String(body?.contact ?? '').trim().slice(0, 200);
+    if (!message) return json({ error: '내용을 입력해 주세요.' }, 400);
+    const sent = await forwardFeedback(env, message, contact);
+    await store.addFeedback({ id: crypto.randomUUID(), message, contact, clientId, sent });
+    return json({ ok: true });
+});
+
 // 정식 Tournament API 결과 콜백 수신부 — 승인 전에는 호출되지 않는다.
 // Riot이 경기 종료 시 결과를 POST하므로 우선 200으로 수신만 확인한다 (수집은 collect 라우트가 담당).
 on('POST', '/tournament-callback', () => json({ ok: true }));

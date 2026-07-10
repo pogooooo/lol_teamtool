@@ -124,6 +124,8 @@ export const toMatchRecord = (match, groupId, puuidToPlayerId) => {
     const rawInfo = { ...info };
     delete rawInfo.gameCreation;
     delete rawInfo.tournamentCode;
+    // 참가자 원본은 participants 테이블에 개별 저장되므로 rawInfo에서 제외 — 매치당 저장 용량 절반 (D1 5GB 무료 한도 보호)
+    delete rawInfo.participants;
 
     const blueWin = info.teams?.find(t => t.teamId === 100)?.win ?? false;
 

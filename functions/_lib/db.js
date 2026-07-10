@@ -273,6 +273,12 @@ export const makeStore = (db) => {
             ));
         },
 
+        /* --- 문의/건의 --- */
+
+        addFeedback: ({ id, message, contact, clientId, sent }) =>
+            db.prepare('INSERT INTO feedback (id, created_at, message, contact, client_id, sent) VALUES (?, ?, ?, ?, ?, ?)')
+                .bind(id, Date.now(), message, contact || null, clientId || null, sent ? 1 : 0).run(),
+
         /* --- 통계 --- */
 
         /** 요약 통계 — 출전 횟수 등 고정 집계는 SQL로 계산 */
