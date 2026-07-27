@@ -102,7 +102,8 @@ export const MatchHistory = () => {
     };
 
     const top3 = sortRankings(rankings, rankMode === 'duo' ? 'games' : rankMode).slice(0, 3);
-    const duoTop3 = computeDuoStats(archive.matches, archive.players).slice(0, 3);
+    const duoStats = computeDuoStats(archive.matches, archive.players);
+    const duoTop3 = duoStats.slice(0, 3);
 
     return (
         <HistoryContainer>
@@ -189,7 +190,7 @@ export const MatchHistory = () => {
             <HelpSection />
 
             {showRanking && (
-                <RankingModal ranking={rankings} initialMode={rankMode === 'duo' ? 'winrate' : rankMode} onClose={() => setShowRanking(false)} />
+                <RankingModal ranking={rankings} duos={duoStats} initialMode={rankMode} onClose={() => setShowRanking(false)} />
             )}
             {showSend && (
                 <SendToBuilderModal

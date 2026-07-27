@@ -60,7 +60,7 @@ export const FeedbackModal = ({ onClose }: { onClose: () => void }) => {
             <Box onClick={e => e.stopPropagation()}>
                 <h3>문의 · 건의</h3>
                 {done ? (
-                    <Done>전달되었습니다. 소중한 의견 감사합니다! 🙏</Done>
+                    <Done>전달되었습니다. 소중한 의견 감사합니다!</Done>
                 ) : (
                     <>
                         <MessageArea

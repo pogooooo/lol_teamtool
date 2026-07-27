@@ -19,6 +19,10 @@ db.exec('PRAGMA foreign_keys = ON');
 try {
     db.exec('ALTER TABLE tournament_codes ADD COLUMN metadata TEXT');
 } catch { /* 이미 존재 */ }
+// 마이그레이션: auction_states에 rev(낙관적 잠금) 컬럼 추가
+try {
+    db.exec('ALTER TABLE auction_states ADD COLUMN rev INTEGER NOT NULL DEFAULT 0');
+} catch { /* 이미 존재 */ }
 db.exec(`
 CREATE TABLE IF NOT EXISTS groups (
     id         TEXT PRIMARY KEY,
@@ -91,6 +95,25 @@ CREATE TABLE IF NOT EXISTS tournament_codes (
     map_type       TEXT NOT NULL,
     spectator_type TEXT NOT NULL,
     metadata       TEXT
+);
+CREATE TABLE IF NOT EXISTS auction_states (
+    group_id   TEXT PRIMARY KEY REFERENCES groups(id) ON DELETE CASCADE,
+    state      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS auction_bids (
+    id           TEXT PRIMARY KEY,
+    group_id     TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    created_at   INTEGER NOT NULL,
+    team_id      TEXT NOT NULL,
+    lot_player_id TEXT NOT NULL,
+    amount       INTEGER NOT NULL,
+    by_name      TEXT
+);
+CREATE TABLE IF NOT EXISTS player_comments (
+    player_id  TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    comment    TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS feedback (
     id         TEXT PRIMARY KEY,
@@ -379,6 +402,53 @@ export const saveTournamentCodes = (groupId, codes, params) => {
         st.run(code, groupId, now, params.teamSize, params.pickType, params.mapType, params.spectatorType, params.metadata ?? '');
     }
 };
+
+/* --- 경매 상태 공유 (실시간 관전) --- */
+
+export const getAuctionState = (groupId) => {
+    const r = db.prepare('SELECT state, updated_at, rev FROM auction_states WHERE group_id = ?').get(groupId);
+    return r ? { state: r.state, updatedAt: r.updated_at, rev: r.rev ?? 0 } : null;
+};
+
+export const saveAuctionState = (groupId, stateJson) =>
+    db.prepare(`
+        INSERT INTO auction_states (group_id, state, updated_at, rev) VALUES (?, ?, ?, 0)
+        ON CONFLICT (group_id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at, rev = rev + 1
+    `).run(groupId, stateJson, Date.now());
+
+/** 낙관적 잠금 갱신 — rev 일치 시에만 갱신하고 성공 여부 반환 */
+export const casAuctionState = (groupId, stateJson, rev) => {
+    const res = db.prepare('UPDATE auction_states SET state = ?, rev = ?, updated_at = ? WHERE group_id = ? AND rev = ?')
+        .run(stateJson, rev + 1, Date.now(), groupId, rev);
+    return res.changes > 0;
+};
+
+/* --- 팀장 제어 입찰 인박스 --- */
+
+export const addAuctionBid = ({ id, groupId, teamId, lotPlayerId, amount, byName }) =>
+    db.prepare('INSERT INTO auction_bids (id, group_id, created_at, team_id, lot_player_id, amount, by_name) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(id, groupId, Date.now(), teamId, lotPlayerId, Math.round(amount), byName || null);
+
+export const listAuctionBids = (groupId) =>
+    db.prepare('SELECT * FROM auction_bids WHERE group_id = ? ORDER BY created_at').all(groupId)
+        .map(r => ({ id: r.id, teamId: r.team_id, lotPlayerId: r.lot_player_id, amount: r.amount, by: r.by_name ?? undefined }));
+
+export const deleteAuctionBids = (groupId, ids) => {
+    if (!ids || ids.length === 0) return;
+    const marks = ids.map(() => '?').join(',');
+    db.prepare(`DELETE FROM auction_bids WHERE group_id = ? AND id IN (${marks})`).run(groupId, ...ids);
+};
+
+/* --- 참가자 코멘트 --- */
+
+export const getPlayerComment = (playerId) =>
+    db.prepare('SELECT comment FROM player_comments WHERE player_id = ?').get(playerId)?.comment ?? '';
+
+export const setPlayerComment = (playerId, comment) =>
+    db.prepare(`
+        INSERT INTO player_comments (player_id, comment, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT (player_id) DO UPDATE SET comment = excluded.comment, updated_at = excluded.updated_at
+    `).run(playerId, comment, Date.now());
 
 /* --- 문의/건의 --- */
 

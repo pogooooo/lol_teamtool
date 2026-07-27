@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Group, GroupPlayer, MatchRecord, RiotAccount } from '../types';
 import * as api from '../services/api';
 import type { GroupStats } from '../services/api';
+import { setActiveGroupBadge } from './useActiveGroupBadge';
 
 const ACTIVE_KEY = 'lol_teamtool:activeGroupId';
 
@@ -112,6 +113,11 @@ export const useArchive = () => {
     };
 
     const activeGroup = groups.find(g => g.id === activeGroupId) ?? null;
+
+    // 헤더의 그룹 배지 동기화 — 어느 탭에서 그룹을 바꾸든 전 화면에 반영된다
+    useEffect(() => {
+        setActiveGroupBadge(activeGroup?.name ?? null);
+    }, [activeGroup?.name]);
 
     return {
         serverOk,

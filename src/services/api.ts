@@ -103,6 +103,37 @@ export const health = () =>
 export const sendFeedback = (message: string, contact: string) =>
     client.post<{ ok: boolean }>('/feedback', { message, contact });
 
+/* --- 경매 상태 공유 (실시간 관전) --- */
+
+export interface AuctionSyncResult {
+    state?: unknown;
+    updatedAt?: number | null;
+    rev: number | null;
+    unchanged?: boolean;
+}
+
+/** 조건부 폴링 — sinceRev가 서버와 같으면 서버가 { unchanged: true } 만 반환 (대역폭 절감) */
+export const getAuctionSync = (groupId: string, sinceRev?: number | null) =>
+    client.get<AuctionSyncResult>(`/groups/${groupId}/auction`, {
+        params: sinceRev != null ? { rev: sinceRev } : undefined,
+    }).then(r => r.data);
+
+export const putAuctionSync = (groupId: string, state: unknown) =>
+    client.put<{ ok: boolean }>(`/groups/${groupId}/auction`, { state });
+
+/* --- 팀장 제어 방식 서버 액션 (진행자 없음 · 누구나 액션) --- */
+
+export type AuctionAction =
+    | { type: 'draw' }
+    | { type: 'endNow' }
+    | { type: 'resolve' }
+    | { type: 'bid'; teamId: string; amount: number; lotPlayerId: string };
+
+/** 서버에 액션을 보내고 적용된 최신 상태 + rev를 받는다 */
+export const postAuctionAction = (groupId: string, action: AuctionAction) =>
+    client.post<{ ok: boolean; state: unknown; rev: number }>(`/groups/${groupId}/auction/action`, action)
+        .then(r => ({ state: r.data.state, rev: r.data.rev }));
+
 /* --- 그룹 --- */
 export const listGroups = () => client.get<Group[]>('/groups').then(r => r.data);
 export const createGroup = (name: string) => client.post<Group>('/groups', { name }).then(r => r.data);
@@ -173,6 +204,8 @@ export interface AccountProfile extends RiotAccount {
 
 export interface PlayerProfile {
     player: GroupPlayer;
+    /** 참가자 코멘트 (자유 메모) */
+    comment: string;
     scrim: { games: number; wins: number };
     accounts: AccountProfile[];
     /** 최근 경기 경향 — 전 계정 합산 */
@@ -188,6 +221,10 @@ export interface PlayerProfile {
 
 export const getPlayerProfile = (playerId: string) =>
     client.get<PlayerProfile>(`/players/${playerId}/profile`).then(r => r.data);
+
+/** 참가자 코멘트 저장 */
+export const savePlayerComment = (playerId: string, comment: string) =>
+    client.put<{ ok: boolean }>(`/players/${playerId}/comment`, { comment });
 export const postMatch = (groupId: string, match: MatchRecord) =>
     client.post(`/groups/${groupId}/matches`, match);
 export const deleteMatch = (matchId: string) => client.delete(`/matches/${matchId}`);

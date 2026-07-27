@@ -14,9 +14,23 @@ const ActionButtons = () => {
 
     const captureAndCopy = () => {
         if (lanesRef.current) {
-            html2canvas(lanesRef.current, {
+            // 임시 대기 칸은 공유용 이미지에서 제외하고, 빠진 칸 폭만큼 이미지도 줄인다
+            const el = lanesRef.current;
+            const temp = el.querySelector('[data-capture-exclude]');
+            const trim = temp ? Math.round(temp.getBoundingClientRect().width) + 16 : 0;
+            const targetWidth = el.offsetWidth - trim;
+            html2canvas(el, {
                 backgroundColor: null,
                 useCORS: true,
+                width: targetWidth,
+                onclone: (doc) => {
+                    const root = doc.querySelector('[data-capture-root]') as HTMLElement | null;
+                    if (root) root.style.width = `${targetWidth}px`;
+                    doc.querySelectorAll('[data-capture-exclude]').forEach(node => node.remove());
+                    doc.querySelectorAll('[data-lane-row]').forEach(node => {
+                        (node as HTMLElement).style.gridTemplateColumns = '80px 1fr 40px 1fr 40px';
+                    });
+                },
             }).then(canvas => {
                 canvas.toBlob(blob => {
                     if (!blob) return;

@@ -24,7 +24,9 @@ export const TierPool = () => {
                             draggable
                             onDragStart={(e) => handlers.onDragStart(e, { name: player.name, origin: { type: 'pool' } })}
                             onContextMenu={(e) => handlers.handleContextMenu(e, player.name)}
+                            onDoubleClick={() => handlers.toggleCaptain(player.name)}
                             tier={player.tier || (tier === '중' ? null : player.tier)}
+                            $captain={handlers.isCaptain(player.name)}
                             $inSlot={false}
                         >
                             {player.name}

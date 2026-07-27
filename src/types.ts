@@ -1,7 +1,7 @@
 export type Tier = '상' | '중' | '하';
 export type Position = '탑' | '정글' | '미드' | '원딜' | '서포터';
 export type OperatorSymbol = '>' | '>=' | '=' | '<=' | '<';
-export type SlotKey = 'name1' | 'name2';
+export type SlotKey = 'name1' | 'name2' | 'temp';
 
 export interface Player {
     name: string;
@@ -11,6 +11,10 @@ export interface Player {
 export interface LaneState {
     name1: string | null;
     name2: string | null;
+    /** 라인 옆 임시 대기 슬롯 — 여러 명을 얹어둘 수 있다 */
+    temps?: string[];
+    /** 구버전 단일 임시 슬롯 (로드 시 temps로 마이그레이션) */
+    temp?: string | null;
     operator: OperatorSymbol;
 }
 

@@ -273,6 +273,56 @@ export const makeStore = (db) => {
             ));
         },
 
+        /* --- 경매 상태 공유 (실시간 관전) --- */
+
+        getAuctionState: async (groupId) => {
+            const r = await db.prepare('SELECT state, updated_at, rev FROM auction_states WHERE group_id = ?').bind(groupId).first();
+            return r ? { state: r.state, updatedAt: r.updated_at, rev: r.rev ?? 0 } : null;
+        },
+
+        saveAuctionState: (groupId, stateJson) =>
+            db.prepare(`
+                INSERT INTO auction_states (group_id, state, updated_at, rev) VALUES (?, ?, ?, 0)
+                ON CONFLICT (group_id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at, rev = rev + 1
+            `).bind(groupId, stateJson, Date.now()).run(),
+
+        /** 낙관적 잠금 갱신 — rev가 일치할 때만 갱신하고 성공 여부를 반환 (팀장 제어 동시 액션 직렬화) */
+        casAuctionState: async (groupId, stateJson, rev) => {
+            const res = await db.prepare('UPDATE auction_states SET state = ?, rev = ?, updated_at = ? WHERE group_id = ? AND rev = ?')
+                .bind(stateJson, rev + 1, Date.now(), groupId, rev).run();
+            return (res.meta?.changes ?? 0) > 0;
+        },
+
+        /* --- 팀장 제어 입찰 인박스 --- */
+
+        addAuctionBid: ({ id, groupId, teamId, lotPlayerId, amount, byName }) =>
+            db.prepare('INSERT INTO auction_bids (id, group_id, created_at, team_id, lot_player_id, amount, by_name) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                .bind(id, groupId, Date.now(), teamId, lotPlayerId, Math.round(amount), byName || null).run(),
+
+        listAuctionBids: async (groupId) => {
+            const { results } = await db.prepare('SELECT * FROM auction_bids WHERE group_id = ? ORDER BY created_at').bind(groupId).all();
+            return results.map(r => ({ id: r.id, teamId: r.team_id, lotPlayerId: r.lot_player_id, amount: r.amount, by: r.by_name ?? undefined }));
+        },
+
+        deleteAuctionBids: async (groupId, ids) => {
+            if (!ids || ids.length === 0) return;
+            const marks = ids.map(() => '?').join(',');
+            await db.prepare(`DELETE FROM auction_bids WHERE group_id = ? AND id IN (${marks})`).bind(groupId, ...ids).run();
+        },
+
+        /* --- 참가자 코멘트 --- */
+
+        getPlayerComment: async (playerId) => {
+            const r = await db.prepare('SELECT comment FROM player_comments WHERE player_id = ?').bind(playerId).first();
+            return r?.comment ?? '';
+        },
+
+        setPlayerComment: (playerId, comment) =>
+            db.prepare(`
+                INSERT INTO player_comments (player_id, comment, updated_at) VALUES (?, ?, ?)
+                ON CONFLICT (player_id) DO UPDATE SET comment = excluded.comment, updated_at = excluded.updated_at
+            `).bind(playerId, comment, Date.now()).run(),
+
         /* --- 문의/건의 --- */
 
         addFeedback: ({ id, message, contact, clientId, sent }) =>

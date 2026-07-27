@@ -74,6 +74,28 @@ CREATE TABLE IF NOT EXISTS tournament_codes (
     spectator_type TEXT NOT NULL,
     metadata       TEXT
 );
+CREATE TABLE IF NOT EXISTS auction_states (
+    group_id   TEXT PRIMARY KEY REFERENCES groups(id) ON DELETE CASCADE,
+    state      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    rev        INTEGER NOT NULL DEFAULT 0  -- 낙관적 잠금 리비전 (팀장 제어 방식 동시 액션 직렬화)
+);
+-- 팀장 제어 방식 입찰 인박스 — 팀장이 각자 보낸 입찰을 진행자가 수신해 적용
+CREATE TABLE IF NOT EXISTS auction_bids (
+    id           TEXT PRIMARY KEY,
+    group_id     TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    created_at   INTEGER NOT NULL,
+    team_id      TEXT NOT NULL,
+    lot_player_id TEXT NOT NULL,
+    amount       INTEGER NOT NULL,
+    by_name      TEXT
+);
+-- 참가자 코멘트 (자유 메모, 한 사람 당 하나)
+CREATE TABLE IF NOT EXISTS player_comments (
+    player_id  TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    comment    TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS feedback (
     id         TEXT PRIMARY KEY,
     created_at INTEGER NOT NULL,
@@ -86,3 +108,4 @@ CREATE INDEX IF NOT EXISTS idx_matches_group_start ON matches (group_id, game_st
 CREATE INDEX IF NOT EXISTS idx_participants_match  ON match_participants (match_id);
 CREATE INDEX IF NOT EXISTS idx_participants_player ON match_participants (player_id);
 CREATE INDEX IF NOT EXISTS idx_codes_group ON tournament_codes (group_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auction_bids_group ON auction_bids (group_id, created_at);

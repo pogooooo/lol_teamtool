@@ -89,6 +89,10 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
     }
     const summaryRate = summaryGames === 0 ? 0 : Math.round((summaryWins / summaryGames) * 100);
     const showRate = Boolean(playerId || champion); // 승/패/승률 배지를 보여줄 조건
+    // 검색 조건에 맞는 승률 이름 — 듀오(같은 팀)/상대 전적/챔피언을 구분해 보여준다
+    const rateLabel = playerId && partnerId
+        ? (pairMode === 'same' ? '듀오 승률' : '상대 전적 승률')
+        : !playerId && champion ? '챔피언 승률' : '승률';
 
     const nameById = (id: string) => archive.players.find(p => p.id === id)?.displayName ?? '?';
     const conditionText = [
@@ -270,7 +274,7 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
                             <>
                                 <span className="tabular win">{summaryWins}승</span>
                                 <span className="tabular lose">{summaryGames - summaryWins}패</span>
-                                <RateBadge $good={summaryRate >= 50} className="tabular">승률 {summaryRate}%</RateBadge>
+                                <RateBadge $good={summaryRate >= 50} className="tabular">{rateLabel} {summaryRate}%</RateBadge>
                             </>
                         )
                     ) : (
@@ -387,7 +391,7 @@ export const MatchList = ({ archive }: { archive: Archive }) => {
                                     <span className="tabular win">{summaryWins}승</span>
                                     <span className="tabular lose">{summaryGames - summaryWins}패</span>
                                 </SideLine>
-                                <RateBadge $good={summaryRate >= 50} className="tabular">승률 {summaryRate}%</RateBadge>
+                                <RateBadge $good={summaryRate >= 50} className="tabular">{rateLabel} {summaryRate}%</RateBadge>
                             </>
                         )}
                         <p className="cond">{conditionText || '필터를 선택하면 조건별 승률이 표시됩니다.'}</p>

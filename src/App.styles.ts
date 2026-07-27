@@ -1,4 +1,4 @@
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
+import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import type { DefaultTheme } from 'styled-components';
 import type { Tier } from './types';
 
@@ -10,24 +10,25 @@ export const TIER_COLORS = {
 
 /*
  * 팔레트 정의는 DESIGN.md 참고.
- * 라이트: #F8FAFC #D9EAFD #BCCCDC #9AA6B2 (+파생 잉크 #6B7A89 #4A5764 #2B3644)
- * 다크:   #352F44 #5C5470 #B9B4C7 #FAF0E6 (+파생 서피스 #453D57)
+ * 라이트: #F9F8F6 #EFE9E3 #D9CFC7 #C9B59C (+파생 잉크 #8A7D6B #8A7358 #3B352C)
+ * 다크:   #222831 #393E46 #948979 #DFD0B8 (+파생 서피스 #4A515B #4F565F)
  */
 export const lightTheme: DefaultTheme = {
     mode: 'light',
-    body: '#F8FAFC',
-    text: '#2B3644',
-    card: '#D9EAFD',
-    cardBorder: '#BCCCDC',
-    placeholder: '#6B7A89',
-    dragOver: '#BCCCDC',
-    nameBg: '#4A5764',
-    nameText: '#F8FAFC',
-    contextMenu: '#F8FAFC',
-    contextMenuBorder: '#BCCCDC',
-    accent: '#4A5764',
-    accentGradient: 'linear-gradient(135deg, #6B7A89 0%, #4A5764 100%)',
-    accentText: '#F8FAFC',
+    body: '#F9F8F6',
+    text: '#3B352C',
+    card: '#EFE9E3',
+    cardBorder: '#D9CFC7',
+    placeholder: '#8A7D6B',
+    dragOver: '#D9CFC7',
+    nameBg: '#8A7358',
+    nameText: '#F9F8F6',
+    white: '#FFFFFF',
+    contextMenu: '#F9F8F6',
+    contextMenuBorder: '#D9CFC7',
+    accent: '#8A7358',
+    accentGradient: 'linear-gradient(135deg, #A99274 0%, #8A7358 100%)',
+    accentText: '#F9F8F6',
     teamBlue: '#0077B6',
     teamRed: '#E63946',
     grass1: '#A9DFC1',
@@ -38,19 +39,20 @@ export const lightTheme: DefaultTheme = {
 
 export const darkTheme: DefaultTheme = {
     mode: 'dark',
-    body: '#352F44',
-    text: '#FAF0E6',
-    card: '#453D57',
-    cardBorder: '#5C5470',
-    placeholder: '#B9B4C7',
-    dragOver: '#5C5470',
-    nameBg: '#FAF0E6',
-    nameText: '#352F44',
-    contextMenu: '#453D57',
-    contextMenuBorder: '#5C5470',
-    accent: '#B9B4C7',
-    accentGradient: 'linear-gradient(135deg, #FAF0E6 0%, #B9B4C7 100%)',
-    accentText: '#352F44',
+    body: '#222831',
+    text: '#FFFFFF',
+    card: '#393E46',
+    cardBorder: '#4F565F',
+    placeholder: '#FFFFFF',
+    dragOver: '#4A515B',
+    nameBg: '#DFD0B8',
+    nameText: '#222831',
+    white: '#FFFFFF',
+    contextMenu: '#393E46',
+    contextMenuBorder: '#4F565F',
+    accent: '#DFD0B8',
+    accentGradient: 'linear-gradient(135deg, #DFD0B8 0%, #948979 100%)',
+    accentText: '#222831',
     teamBlue: '#4DA8DA',
     teamRed: '#F07178',
     grass1: '#3E7A5C',
@@ -133,14 +135,63 @@ export const AppContainer = styled.div<{ $fitViewport?: boolean }>`
     padding: 1.25rem 2rem;
     gap: var(--section-gap);
     width: 100%;
-    max-width: 800px;
+    /* 세 탭(팀 빌더·내전 기록·경매) 가로 폭 통일 */
+    max-width: 1200px;
 `;
 
+/* 팀 빌더 본문 + 오른쪽 최근 이름 패널 (좁은 화면에서는 패널 숨김 → 입력창 아래 인라인) */
+export const BuilderLayout = styled.div`
+    flex-grow: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+
+    .main {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--section-gap);
+    }
+
+    @media (min-width: 1100px) {
+        grid-template-columns: 1fr 220px;
+    }
+`;
+
+export const RecentSidePanel = styled.aside`
+    display: none;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.8rem 0.9rem;
+    background: ${({ theme }) => theme.card};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: var(--radius-lg);
+    overflow-y: auto;
+    min-height: 0;
+    /* 오른쪽 열을 꽉 채워 빈 공간 없이 (목록이 짧아도 패널이 세로로 채워짐) */
+    align-self: stretch;
+
+    h4 {
+        font-size: 0.85rem;
+        color: ${({ theme }) => theme.text};
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid ${({ theme }) => theme.cardBorder};
+    }
+
+    @media (min-width: 1100px) {
+        display: flex;
+    }
+`;
+
+/* 탭 바 오른쪽에 인라인으로 들어간다 — 절대 위치로 띄우면 탭을 가리므로 금지 */
 export const Header = styled.header`
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: 0.25rem;
+    flex-shrink: 0;
 `;
 
 export const ThemeToggleButton = styled.button`
@@ -148,14 +199,15 @@ export const ThemeToggleButton = styled.button`
     color: ${({ theme }) => theme.text};
     border: 1px solid ${({ theme }) => theme.cardBorder};
     border-radius: 9999px;
-    padding: 0.5rem;
+    padding: 0.4rem 0.8rem;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 0.78rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease-in-out;
-    &:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 `;
 
 /* --- 공용 UI (디자인 균일화, DESIGN.md 규칙 준수) --- */
@@ -251,11 +303,13 @@ export const ModalContent = styled.div`
 
 export const TabBar = styled.nav`
     display: flex;
+    align-items: center;
     gap: 0.5rem;
     background: ${({ theme }) => theme.card};
     border: 1px solid ${({ theme }) => theme.cardBorder};
     border-radius: var(--radius-lg);
     padding: 0.375rem;
+    flex-wrap: wrap;
 `;
 
 export const TabButton = styled.button<{ $active?: boolean }>`
@@ -306,9 +360,14 @@ export const TierLabel = styled.h3<{ $tierColor?: string }>`
     text-align: center;
 `;
 
-export const DraggableName = styled.div<{ $inSlot?: boolean; tier?: Tier | null }>`
-    background-color: ${({ theme }) => theme.nameBg};
-    color: ${({ theme }) => theme.nameText};
+const captainGlow = keyframes`
+    0%, 100% { box-shadow: 0 0 6px 1px rgba(255,214,102,0.85), 0 0 14px 3px rgba(255,190,60,0.55); }
+    50% { box-shadow: 0 0 10px 3px rgba(255,214,102,1), 0 0 22px 6px rgba(255,190,60,0.75); }
+`;
+
+export const DraggableName = styled.div<{ $inSlot?: boolean; tier?: Tier | null; $captain?: boolean }>`
+    background-color: ${({ theme }) => theme.white};
+    color: #1B1F27;
     padding: 0 1rem;
     height: var(--control-h);
     border-radius: var(--radius-md);
@@ -319,11 +378,14 @@ export const DraggableName = styled.div<{ $inSlot?: boolean; tier?: Tier | null 
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     width: ${({ $inSlot }) => ($inSlot ? '100%' : 'auto')};
     min-width: 72px;
     border: 3px solid ${({ theme, tier }) => tier ? theme[tier] : 'transparent'};
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    /* 팀장: 은은한 골드 글로우 (아이콘 없이 표시). 더블클릭으로 토글 */
+    ${({ $captain }) => $captain
+        ? css`animation: ${captainGlow} 1.8s ease-in-out infinite;`
+        : css`box-shadow: 0 1px 3px rgba(0,0,0,0.1);`}
 
     &:active {
         cursor: grabbing;
@@ -335,28 +397,51 @@ export const LanesContainer = styled.main`
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    /* 라인들을 간격 없이 하나의 블록으로 붙인다 (가운데 정렬) */
     justify-content: center;
-    align-items: center;
-    gap: var(--lane-gap);
+    align-items: stretch;
+    gap: 0;
 `;
 
 export const Lane = styled.div`
     display: grid;
-    grid-template-columns: 80px 1fr 40px 1fr 40px;
+    /* 임시 칸(마지막 열)은 3명이 한눈에 보이도록 넓게 잡는다 */
+    grid-template-columns: 80px 1fr 40px 1fr 40px minmax(200px, 0.95fr);
     align-items: center;
     gap: 1rem;
     background: ${({ theme }) => theme.card};
     border: 1px solid ${({ theme }) => theme.cardBorder};
     padding: 0.5rem 1.25rem;
-    border-radius: var(--radius-lg);
     width: 100%;
+
+    /* 붙어 있는 라인들 — 사이 테두리는 겹치지 않게 하고 바깥 모서리만 둥글게 */
+    border-radius: 0;
+    border-top-width: 0;
+    &:first-child {
+        border-top-width: 1px;
+        border-top-left-radius: var(--radius-lg);
+        border-top-right-radius: var(--radius-lg);
+    }
+    &:last-child {
+        border-bottom-left-radius: var(--radius-lg);
+        border-bottom-right-radius: var(--radius-lg);
+    }
+
+    @media (max-width: 560px) {
+        gap: 0.5rem;
+        grid-template-columns: 52px 1fr 28px 1fr 28px 0.9fr;
+    }
 `;
 
+/* 아이콘이 탭 맞춘 것처럼 전 라인 같은 세로줄에서 시작하도록 좌측 정렬 고정 */
 export const LaneLabel = styled.span`
     font-weight: 600;
-    text-align: right;
     color: ${({ theme }) => theme.placeholder};
     font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
 `;
 
 export const NameSlot = styled.div<{ $isDragOver?: boolean }>`
@@ -367,6 +452,36 @@ export const NameSlot = styled.div<{ $isDragOver?: boolean }>`
     justify-content: center;
     align-items: center;
     transition: background-color 0.2s ease;
+`;
+
+/* 라인 옆 임시 대기 슬롯 — 최대 3명, 전원이 한눈에 보이도록 가로로 나란히 표시 */
+export const TempSlot = styled(NameSlot)`
+    height: var(--control-h);
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 3px 5px;
+    overflow: hidden;
+    border: 1px dashed ${({ theme }) => theme.cardBorder};
+    background-color: ${({ theme, $isDragOver }) => $isDragOver ? theme.dragOver : 'transparent'};
+
+    /* 3명이 균등하게 나눠 쓰고, 이름이 길면 말줄임 */
+    > * {
+        min-width: 0;
+        flex: 0 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ph {
+        width: 100%;
+        text-align: center;
+        font-size: 0.72rem;
+        color: ${({ theme }) => theme.placeholder};
+        opacity: 0.65;
+        user-select: none;
+    }
 `;
 
 export const Operator = styled.div`

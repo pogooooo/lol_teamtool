@@ -9,6 +9,7 @@ import {
     getChampionMasteries, getMasteryScore, listRecentMatchIds,
 } from './riot.js';
 import { getAssetMeta, getChampionImage, getItemImage, getRuneImage, getSpellImage } from './assets.js';
+import { applyAuctionAction } from '../functions/_lib/auctionEngine.js';
 
 /*
  * 로컬 개발용 API 서버 (M1).
@@ -326,6 +327,7 @@ app.get('/api/players/:playerId/profile', async (req, res) => {
 
     res.json({
         player,
+        comment: store.getPlayerComment(player.id),
         scrim: { games: scrim.games, wins: scrim.wins },
         accounts: results,
         recent,
@@ -531,6 +533,62 @@ app.post('/api/tournament/codes/:code/collect', async (req, res) => {
         }
         throw e;
     }
+});
+
+/*
+ * --- 경매 상태 공유 (실시간 관전) — functions/api와 동일 ---
+ */
+
+app.get('/api/groups/:groupId/auction', (req, res) => {
+    const row = store.getAuctionState(req.params.groupId);
+    if (!row) return res.json({ state: null, updatedAt: null, rev: null });
+    const since = req.query.rev;
+    if (since != null && String(row.rev) === String(since)) return res.json({ unchanged: true, rev: row.rev });
+    let parsed = null;
+    try { parsed = JSON.parse(row.state); } catch { /* 손상된 상태는 없음 처리 */ }
+    res.json({ state: parsed, updatedAt: row.updatedAt, rev: row.rev });
+});
+
+app.put('/api/groups/:groupId/auction', (req, res) => {
+    const state = req.body?.state;
+    if (!state || typeof state !== 'object') return res.status(400).json({ error: '잘못된 경매 상태입니다.' });
+    const raw = JSON.stringify(state);
+    if (raw.length > 200000) return res.status(413).json({ error: '경매 상태가 너무 큽니다.' });
+    if (!store.getGroup(req.params.groupId)) return res.status(404).json({ error: '그룹을 찾을 수 없습니다.' });
+    store.saveAuctionState(req.params.groupId, raw);
+    res.json({ ok: true });
+});
+
+/* --- 팀장 제어 방식 서버 액션 (진행자 없음, functions/api와 동일) --- */
+
+const mutateAuction = (groupId, mutate) => {
+    for (let i = 0; i < 6; i += 1) {
+        const row = store.getAuctionState(groupId);
+        if (!row) return null;
+        let state;
+        try { state = JSON.parse(row.state); } catch { return null; }
+        const next = mutate(state);
+        if (next === state) return { state, rev: row.rev };
+        if (store.casAuctionState(groupId, JSON.stringify(next), row.rev)) return { state: next, rev: row.rev + 1 };
+    }
+    return null;
+};
+
+app.post('/api/groups/:groupId/auction/action', (req, res) => {
+    const type = String(req.body?.type ?? '');
+    if (!['draw', 'bid', 'resolve', 'endNow'].includes(type)) return res.status(400).json({ error: '알 수 없는 액션입니다.' });
+    const result = mutateAuction(req.params.groupId, (state) => applyAuctionAction(state, req.body));
+    if (!result) return res.status(404).json({ error: '진행 중인 경매가 없습니다.' });
+    res.json({ ok: true, state: result.state, rev: result.rev });
+});
+
+/* --- 참가자 코멘트 --- */
+
+app.put('/api/players/:playerId/comment', (req, res) => {
+    const player = store.getPlayer(req.params.playerId);
+    if (!player) return res.status(404).json({ error: '참가자를 찾을 수 없습니다.' });
+    store.setPlayerComment(req.params.playerId, String(req.body?.comment ?? '').slice(0, 1000));
+    res.json({ ok: true });
 });
 
 /*

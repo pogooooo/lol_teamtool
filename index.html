@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>내전팟 — 롤 내전 팀 밸런스 & 기록</title>
-    <meta name="description" content="내전팟은 롤(LoL) 내전·스크림을 위한 도구입니다. 티어별 드래그 앤 드롭으로 5:5 팀 밸런스를 맞추고, 그룹별로 내전 전적을 기록·검색하세요."/>
-    <meta name="keywords" content="내전팟, 롤, 내전, 롤 내전, 팀짜기, 팀빌더, 롤 팀 밸런스, 내전 기록, 5:5, 스크림"/>
+    <meta name="description" content="롤 내전 팀을 공정하게 짜는 무료 도구. 티어별 드래그 앤 드롭으로 5:5 팀 밸런스를 맞추고, 그룹별 내전 전적·승률·듀오 순위를 기록하며, 경매(옥션) 드래프트로 팀을 구성하세요. 설치·회원가입 없이 PC·모바일에서 바로 사용."/>
+    <meta name="keywords" content="내전팟, 롤 내전, 롤 팀 짜기, 롤 팀 밸런스, 롤 내전 사이트, 롤 내전 팀 짜기, 팀 빌더, 5대5 팀짜기, 롤 스크림, 사내전, 내전 전적, 내전 기록, 듀오 승률, 롤 경매, 롤 옥션, 경매 내전, 롤 팀 랜덤, 리그오브레전드 내전, LoL 내전, 롤 밸런스 팀, 디스코드 내전"/>
+    <link rel="canonical" href="https://lol-teamtool.pages.dev/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="내전팟 — 롤 내전 팀 밸런스 & 기록" />
@@ -14,9 +15,46 @@
     <meta property="og:url" content="https://lol-teamtool.pages.dev" />
     <meta property="og:site_name" content="내전팟" />
     <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://lol-teamtool.pages.dev/team_icon.png" />
 
-    <meta name="twitter:card" content="summary_large_image" /> <meta name="twitter:title" content="내전팟 — 롤 내전 팀 밸런스 & 기록" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="내전팟 — 롤 내전 팀 밸런스 & 기록" />
     <meta name="twitter:description" content="티어별로 간편하게 롤 내전 5:5 팀을 짜보세요." />
+    <meta name="twitter:image" content="https://lol-teamtool.pages.dev/team_icon.png" />
+
+    <!-- 검색엔진용 구조화 데이터 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "내전팟",
+      "alternateName": "LITT (LoL In-house Team Tool)",
+      "url": "https://lol-teamtool.pages.dev/",
+      "description": "리그 오브 레전드 내전(스크림)을 위한 무료 팀 밸런싱·전적 기록 도구. 티어별 드래그 앤 드롭 5:5 팀 구성, 그룹별 내전 전적·승률·듀오 순위 제공.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "ko",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+    }
+    </script>
+    <!-- FAQ 구조화 데이터 (검색 리치 결과) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "롤 내전 팀을 어떻게 공정하게 짜나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "참가자를 상·중·하 티어로 나눈 뒤 드래그 앤 드롭으로 배치하고, 라인별 두 팀의 전력을 비교해 조정합니다. 티어 점수뿐 아니라 주 포지션 기량과 챔피언 폭을 함께 고려하면 5:5에 가까운 팀을 만들 수 있습니다." } },
+        { "@type": "Question", "name": "회원가입이나 설치가 필요한가요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "아니요. 브라우저에서 바로 사용하며 팀 빌더는 로그인 없이 이용합니다. 내전 기록은 그룹 참여 코드로 모임을 구분합니다." } },
+        { "@type": "Question", "name": "롤 계정 비밀번호를 입력해야 하나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "아니요. 비밀번호는 요구하지 않으며 라이엇 ID(게임명#태그)만으로 공개 전적·랭크 정보를 조회합니다." } },
+        { "@type": "Question", "name": "내전팟은 무료인가요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "네. 모든 기능이 무료이며 운영은 광고로만 유지됩니다. 참가비·상금·가상 화폐 같은 결제 요소는 없습니다." } }
+      ]
+    }
+    </script>
     <meta name="theme-color" content="#1A1A2A" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/team_icon.png" />
@@ -28,18 +66,9 @@
     <!-- Pretendard: 한글 UI 표준 폰트. 로드 실패 시 시스템 폰트로 폴백 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 
-    <!-- 부팅 테마: React 마운트 전에도 저장된 테마 배경을 적용해 흰 화면 플래시를 막는다 (App.tsx에서 data-boot 제거) -->
-    <script>
-      (function () {
-        var t = 'dark';
-        try { t = (JSON.parse(localStorage.getItem('lol_teamtool:builder:v1') || '{}').theme === 'light') ? 'light' : 'dark'; } catch (e) { /* 기본 dark */ }
-        document.documentElement.dataset.boot = t;
-      })();
-    </script>
     <style>
-      /* 앱 로드 전 스플래시(#boot-splash) 전용 스타일 — 마운트되면 통째로 교체된다 */
-      html[data-boot='dark'] body { background: #352F44; color: #FAF0E6; }
-      html[data-boot='light'] body { background: #F8FAFC; color: #2B3644; }
+      /* 앱 로드 전 스플래시(#boot-splash) 전용 스타일 — 마운트되면 통째로 교체된다. 다크 전용 */
+      body { background: #222831; color: #FFFFFF; }
       #boot-splash {
         max-width: 680px;
         margin: 0 auto;
@@ -49,6 +78,11 @@
         font-size: 0.95rem;
       }
       #boot-splash h1 { font-size: 1.5rem; margin-bottom: 6px; }
+      #boot-splash h2 { font-size: 1.15rem; margin: 26px 0 8px; }
+      #boot-splash .lead { font-size: 1rem; }
+      #boot-splash .feat { list-style: none; padding-left: 0; }
+      #boot-splash .feat li { margin: 8px 0; }
+      #boot-splash strong { opacity: 1; }
       #boot-splash .loading {
         display: flex; align-items: center; gap: 10px;
         margin: 18px 0 26px; font-size: 0.9rem; opacity: 0.75;
@@ -69,28 +103,66 @@
     <div id="root">
       <!-- React 마운트 전 스플래시 + 정적 콘텐츠 — 검색엔진/심사 크롤러가 읽는 영역 (앱 로드 시 교체됨) -->
       <div id="boot-splash">
-        <h1>내전팟 — 롤 내전 팀 밸런스 &amp; 기록</h1>
+        <h1>내전팟 — 롤 내전 팀 밸런스 &amp; 전적 기록 도구</h1>
         <div class="loading"><span class="spinner"></span>앱을 불러오는 중입니다…</div>
-        <p>
-          내전팟은 친구, 동아리, 직장 동료와 함께하는 리그 오브 레전드 내전(사내전, 스크림)을 위한 무료 도구입니다.
-          참가자를 상·중·하 티어로 나눠 드래그 앤 드롭으로 5:5 팀 밸런스를 맞추고, 그룹 참여 코드로
-          모임별 내전 전적을 기록하고 검색할 수 있습니다. 설치와 회원가입 없이 브라우저에서 바로 사용합니다.
+
+        <p class="lead">
+          내전팟(LITT)은 친구, 대학 동아리, 직장 동료, 디스코드 커뮤니티가 함께하는
+          <strong>리그 오브 레전드(League of Legends) 내전</strong>(사내전·스크림·커스텀 게임)을 위한 무료 웹 도구입니다.
+          참가자를 실력별로 나눠 <strong>공정한 5:5 팀</strong>을 짜고, 모임별로 <strong>내전 전적과 승률</strong>을 기록하며,
+          <strong>경매(옥션) 드래프트</strong>로 팀을 구성하는 것까지 한곳에서 해결합니다.
+          설치와 회원가입 없이 PC·모바일 브라우저에서 바로 사용할 수 있습니다.
         </p>
+
+        <h2>내전팟으로 할 수 있는 것</h2>
+        <ul class="feat">
+          <li><strong>팀 빌더</strong> — 참가자를 상·중·하 티어로 나눠 드래그 앤 드롭으로 배치하고, 라인(탑·정글·미드·원딜·서포터)별 상대 전력을 한눈에 비교합니다. 랜덤 배치, 좌우 팀 교체, 팀 화면 이미지 복사(디스코드 공유용)까지 지원합니다.</li>
+          <li><strong>내전 기록</strong> — 그룹 참여 코드로 모임을 만들고, 라이엇 ID를 등록하면 사용자 지정 게임(커스텀 게임)을 자동으로 수집합니다. 참가자별 출전·승률 순위, 듀오 승률, 경기별 상세 스코어보드(챔피언·KDA·아이템·딜량), 잔디밭 형태의 활동 달력을 제공합니다.</li>
+          <li><strong>롤 경매(옥션)</strong> — 포인트로 선수를 낙찰받아 팀을 구성하는 경매 드래프트를 지원합니다. 중앙 진행(사회자) 방식과 팀장이 각자 접속해 실시간으로 입찰하는 방식을 모두 지원하고, 타이머·유찰 라운드·라인 중복 금지 같은 규칙을 자유롭게 설정할 수 있습니다.</li>
+        </ul>
+
+        <h2>롤 내전 팀은 어떻게 짜야 공정할까?</h2>
         <p>
-          팀 빌더에서는 라인별 상대 전력 표시, 랜덤 배치, 팀 화면 이미지 복사를 지원하고,
-          내전 기록에서는 참가자별 출전·승률 순위, 경기별 상세 스코어보드(챔피언·KDA·아이템),
-          등록한 라이엇 계정의 랭크와 챔피언 숙련도 조회를 제공합니다.
+          내전에서 가장 흔한 불만은 “팀 밸런스가 안 맞는다”는 것입니다. 티어(솔로 랭크 점수)만 보고 팀을 나누면
+          실제 체감 실력과 어긋나기 쉽습니다. 같은 다이아라도 주 포지션에서의 기량과 오프 포지션(비주류 라인)에서의 기량은
+          크게 다르고, 챔피언 폭·한타 판단·라인전 능력처럼 숫자로 드러나지 않는 요소도 많기 때문입니다.
+          내전팟은 참가자를 <strong>상·중·하 세 단계</strong>로 단순하게 나눠, 주최자가 커뮤니티의 실제 실력을 반영해
+          빠르게 팀을 맞출 수 있게 돕습니다. 라인별로 두 팀의 전력을 나란히 놓고 <strong>&gt; = &lt; 기호</strong>로 우열을 표시하면,
+          어느 라인이 유리하고 어느 라인이 불리한지 한눈에 보여 조정이 쉬워집니다.
         </p>
+
+        <h2>내전 운영, 이렇게 하면 편합니다</h2>
+        <p>
+          첫째, <strong>모집</strong>은 시작 시간을 명확히 정하고 인원(10명 기준)과 대기 인원을 함께 받아 두면 노쇼에 대비할 수 있습니다.
+          둘째, <strong>규칙</strong>은 밴/픽 방식, 대리·트롤 금지, 재경기 기준을 미리 합의하면 분쟁이 줄어듭니다.
+          셋째, <strong>밸런스 조정</strong>은 첫 판 결과를 보고 다음 판에서 티어를 소폭 바꾸거나 라인을 스왑해 승률을 5:5에 가깝게 맞추는 것이 좋습니다.
+          내전팟의 내전 기록 기능을 쓰면 누가 자주 이기고 지는지, 어떤 듀오가 강한지 데이터로 확인할 수 있어
+          다음 내전의 팀 배분에 참고할 수 있습니다.
+        </p>
+
+        <h2>자주 묻는 질문</h2>
+        <p><strong>Q. 회원가입이나 설치가 필요한가요?</strong><br />
+          아니요. 브라우저에서 바로 사용하며, 팀 빌더는 로그인 없이 이용할 수 있습니다. 내전 기록은 그룹 참여 코드로 모임을 구분합니다.</p>
+        <p><strong>Q. 롤 계정 비밀번호를 입력하나요?</strong><br />
+          아니요. 비밀번호는 절대 요구하지 않습니다. 라이엇 ID(게임명#태그)만 등록하면 공개된 전적·랭크 정보만 조회합니다.</p>
+        <p><strong>Q. 모바일에서도 되나요?</strong><br />
+          네. 스마트폰·태블릿 브라우저에서도 동작하며, 팀장이 각자 접속하는 경매 방식도 모바일에서 참여할 수 있습니다.</p>
+        <p><strong>Q. 완전히 무료인가요?</strong><br />
+          네. 모든 기능이 무료이며, 운영은 광고로만 유지됩니다. 참가비·상금·가상 화폐 같은 결제 요소는 없습니다.</p>
+
+        <h2>더 알아보기</h2>
         <ul>
-          <li><a href="/guide.html">사용법 가이드</a> — 팀 빌더와 내전 기록 사용 방법</li>
-          <li><a href="/tips.html">내전 운영 가이드</a> — 모집, 규칙, 밸런스 조정 노하우</li>
+          <li><a href="/guide.html">사용법 가이드</a> — 팀 빌더와 내전 기록을 단계별로 사용하는 방법</li>
+          <li><a href="/tips.html">내전 운영 가이드</a> — 모집·규칙·밸런스 조정 노하우</li>
           <li><a href="/positions.html">포지션 이해와 팀 밸런싱</a> — 오프 포지션 보정과 듀오 시너지</li>
-          <li><a href="/faq.html">자주 묻는 질문</a></li>
+          <li><a href="/faq.html">자주 묻는 질문</a> — 데이터 저장, 그룹 코드, 계정 등록, 광고 안내</li>
           <li><a href="/privacy.html">개인정보처리방침</a></li>
         </ul>
+
         <p>문의·건의: <a href="mailto:pogooo1103@gmail.com">pogooo1103@gmail.com</a></p>
         <p class="fineprint">
           내전팟은 라이엇 게임즈(Riot Games)의 공식 제품이 아니며, 라이엇 게임즈의 보증을 받지 않았습니다.
+          리그 오브 레전드와 관련 자산은 라이엇 게임즈의 상표 또는 등록 상표입니다.
         </p>
       </div>
     </div>

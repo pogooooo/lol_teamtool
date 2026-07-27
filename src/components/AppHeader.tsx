@@ -1,59 +1,30 @@
-import { useState } from 'react';
 import styled from 'styled-components';
-import { useTeamBuilderContext } from '../hooks/useTeamBuilderLogic';
-import {
-    Header,
-    ThemeToggleButton,
-    ModalOverlay,
-    ModalContent,
-    PrimaryButton,
-    SecondaryButton
-} from '../App.styles';
+import { useActiveGroupBadge } from '../hooks/useActiveGroupBadge';
+import { Header } from '../App.styles';
 
 export const AppHeader = () => {
-    const { theme, toggleTheme } = useTeamBuilderContext();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const handleThemeClick = () => setIsModalOpen(true);
-    const handleConfirm = () => {
-        toggleTheme();
-        setIsModalOpen(false);
-    };
-    const handleCancel = () => setIsModalOpen(false);
+    const groupName = useActiveGroupBadge();
 
     return (
         <Header>
-            <ThemeToggleButton onClick={handleThemeClick}>
-                {theme === 'light' ? '☀️' : '🌙'}
-            </ThemeToggleButton>
-
-            {isModalOpen && (
-                <ModalOverlay onClick={handleCancel}>
-                    <ModalContent onClick={(e) => e.stopPropagation()}>
-                        <ModalIcon>{theme === 'light' ? '🌙' : '☀️'}</ModalIcon>
-                        <h3>테마 변경</h3>
-                        <p>새로운 분위기로 전환하시겠습니까?</p>
-                        <ButtonGroup>
-                            <SecondaryButton onClick={handleCancel}>닫기</SecondaryButton>
-                            <PrimaryButton onClick={handleConfirm}>변경하기</PrimaryButton>
-                        </ButtonGroup>
-                    </ModalContent>
-                </ModalOverlay>
-            )}
+            {/* 현재 선택된 내전 기록 그룹 — 모든 탭에서 보인다 */}
+            <GroupBadge title="현재 선택된 내전 기록 그룹" $none={!groupName}>
+                {groupName ? `그룹 · ${groupName}` : '그룹 미선택'}
+            </GroupBadge>
         </Header>
     );
 };
 
-const ModalIcon = styled.div`
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-`;
-
-const ButtonGroup = styled.div`
-    display: flex;
-    gap: 12px;
-
-    & > button {
-        flex: 1;
-    }
+const GroupBadge = styled.span<{ $none?: boolean }>`
+    padding: 0.4rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: ${({ theme, $none }) => ($none ? theme.placeholder : theme.text)};
+    background: ${({ theme }) => theme.card};
+    border: 1px solid ${({ theme, $none }) => ($none ? theme.cardBorder : theme.accent)};
 `;

@@ -3,18 +3,18 @@ import { ThemeProvider } from 'styled-components';
 
 import {
     GlobalStyle,
-    lightTheme,
     darkTheme,
     AppContainer,
     PageWrapper,
     AdContainer,
     TabBar,
     TabButton,
+    BuilderLayout,
+    RecentSidePanel,
     FooterBar
 } from './App.styles';
 
 import ActionButtons from './components/ActionButtons';
-import { useTeamBuilderContext } from './hooks/useTeamBuilderLogic';
 import { AppHeader } from './components/AppHeader';
 import { AppContextMenu } from './components/AppContextMenu';
 import { TierPool } from './components/TierPool';
@@ -23,15 +23,19 @@ import { PlayerInput } from './components/PlayerInput';
 import { AprilFoolsChat } from './components/AprilFoolsChat';
 import { AdSense } from './components/AdSense';
 import { MatchHistory } from './components/MatchHistory';
+import { AuctionTab } from './components/AuctionTab';
 import { FeedbackModal } from './components/FeedbackModal';
+import { RecentNamesList } from './components/RecentNames';
+import { BuilderTips } from './components/BuilderTips';
 
-// URL 분리: #/builder = 팀 빌더, #/records = 내전 기록 (해시 라우팅 — 새로고침해도 탭 유지, SPA라 전환 시 로딩 없음)
-type View = 'builder' | 'history';
-const viewFromHash = (): View => (window.location.hash.startsWith('#/records') ? 'history' : 'builder');
+// URL 분리: #/builder = 팀 빌더, #/records = 내전 기록, #/auction = 롤 경매 (해시 라우팅 — 새로고침해도 탭 유지)
+type View = 'builder' | 'history' | 'auction';
+const viewFromHash = (): View =>
+    window.location.hash.startsWith('#/records') ? 'history'
+    : window.location.hash.startsWith('#/auction') ? 'auction'
+    : 'builder';
 
 const App = () => {
-    const { theme } = useTeamBuilderContext();
-    const currentTheme = theme === 'light' ? lightTheme : darkTheme;
     const [view, setView] = useState<View>(viewFromHash);
     const [showFeedback, setShowFeedback] = useState(false);
 
@@ -47,11 +51,11 @@ const App = () => {
     }, []);
 
     const go = (next: View) => {
-        window.location.hash = next === 'history' ? '#/records' : '#/builder';
+        window.location.hash = next === 'history' ? '#/records' : next === 'auction' ? '#/auction' : '#/builder';
     };
 
     return (
-        <ThemeProvider theme={currentTheme}>
+        <ThemeProvider theme={darkTheme}>
             <GlobalStyle />
             <AppContextMenu />
             <AprilFoolsChat />
@@ -63,8 +67,6 @@ const App = () => {
 
                 {/* 팀 빌딩 화면은 스크롤 없이 100vh 안에 들어가야 한다 (DESIGN.md) */}
                 <AppContainer $fitViewport={view === 'builder'}>
-                    <AppHeader />
-
                     <TabBar>
                         <TabButton
                             $active={view === 'builder'}
@@ -78,17 +80,35 @@ const App = () => {
                         >
                             내전 기록
                         </TabButton>
+                        <TabButton
+                            $active={view === 'auction'}
+                            onClick={() => go('auction')}
+                        >
+                            경매
+                        </TabButton>
+                        {/* 그룹 배지 + 테마 버튼 — 탭 바 오른쪽 인라인 배치 */}
+                        <AppHeader />
                     </TabBar>
 
                     {view === 'builder' ? (
-                        <>
-                            <TierPool />
-                            <LaneDisplay />
-                            <PlayerInput />
-                            <ActionButtons />
-                        </>
-                    ) : (
+                        <BuilderLayout>
+                            <div className="main">
+                                <TierPool />
+                                <LaneDisplay />
+                                <PlayerInput />
+                                <ActionButtons />
+                            </div>
+                            {/* 최근 이름 + 간단 사용법 — 넓은 화면에서 오른쪽에 상시 표시 */}
+                            <RecentSidePanel>
+                                <h4>최근 이름</h4>
+                                <RecentNamesList />
+                                <BuilderTips />
+                            </RecentSidePanel>
+                        </BuilderLayout>
+                    ) : view === 'history' ? (
                         <MatchHistory />
+                    ) : (
+                        <AuctionTab />
                     )}
                 </AppContainer>
 

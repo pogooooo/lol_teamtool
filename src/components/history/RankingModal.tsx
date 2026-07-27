@@ -3,30 +3,51 @@ import styled from 'styled-components';
 import { CompactButton, ModalContent, ModalOverlay } from '../../App.styles';
 import { sortRankings, winRateOf } from '../../services/api';
 import type { PlayerRanking } from '../../services/api';
+import type { DuoStat } from '../../services/matchStats';
 
-// 전체 참가자 순위 모달 — 출전 횟수 ↔ 승률 토글
-export const RankingModal = ({ ranking, initialMode, onClose }: {
+type Mode = 'games' | 'winrate' | 'duo';
+
+// 전체 참가자 순위 모달 — 출전 횟수 ↔ 승률 ↔ 듀오 승률 토글
+export const RankingModal = ({ ranking, duos, initialMode, onClose }: {
     ranking: PlayerRanking[];
-    initialMode: 'games' | 'winrate';
+    duos: DuoStat[];
+    initialMode: Mode;
     onClose: () => void;
 }) => {
-    const [mode, setMode] = useState<'games' | 'winrate'>(initialMode);
-    const sorted = sortRankings(ranking, mode);
+    const [mode, setMode] = useState<Mode>(initialMode);
+    const sorted = sortRankings(ranking, mode === 'duo' ? 'games' : mode);
 
     return (
         <ModalOverlay onClick={onClose}>
             <RankingBox onClick={e => e.stopPropagation()}>
                 <TopRow>
-                    <h3>참가자 순위</h3>
+                    <h3>{mode === 'duo' ? '듀오 승률 순위' : '참가자 순위'}</h3>
                     <CompactButton onClick={onClose}>닫기</CompactButton>
                 </TopRow>
 
                 <ToggleRow>
                     <ToggleButton $active={mode === 'games'} onClick={() => setMode('games')}>출전 순</ToggleButton>
                     <ToggleButton $active={mode === 'winrate'} onClick={() => setMode('winrate')}>승률 순</ToggleButton>
+                    <ToggleButton $active={mode === 'duo'} onClick={() => setMode('duo')} title="같은 팀으로 2판 이상 뛴 듀오">듀오 순</ToggleButton>
                 </ToggleRow>
 
-                {sorted.length === 0 ? (
+                {mode === 'duo' ? (
+                    duos.length === 0 ? (
+                        <Empty>같은 팀으로 2판 이상 뛴 듀오가 아직 없습니다.</Empty>
+                    ) : (
+                        <List>
+                            {duos.map((d, i) => (
+                                <Row key={d.key} $top={i === 0}>
+                                    <span className="rank">{i + 1}</span>
+                                    <span className="name">{d.aName} · {d.bName}</span>
+                                    <span className="stat tabular">
+                                        {d.winRate}% ({d.wins}승 {d.games - d.wins}패)
+                                    </span>
+                                </Row>
+                            ))}
+                        </List>
+                    )
+                ) : sorted.length === 0 ? (
                     <Empty>참가자가 없습니다.</Empty>
                 ) : (
                     <List>
@@ -112,5 +133,6 @@ const Row = styled.div<{ $top?: boolean }>`
         font-weight: 700;
         color: ${({ theme, $top }) => ($top ? theme.accent : theme.placeholder)};
     }
+    .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .stat { color: ${({ theme }) => theme.placeholder}; font-weight: 600; font-size: 0.82rem; }
 `;

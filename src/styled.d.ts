@@ -11,6 +11,7 @@ declare module 'styled-components' {
         dragOver: string;
         nameBg: string;
         nameText: string;
+        white: string;
         contextMenu: string;
         contextMenuBorder: string;
         accent: string;

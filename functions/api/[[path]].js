@@ -1,6 +1,7 @@
 import { makeStore } from '../_lib/db.js';
 import { makeRiot, RiotError, toMatchRecord } from '../_lib/riot.js';
 import { getAssetMeta, getChampionImage, getItemImage, getRuneImage, getSpellImage } from '../_lib/assets.js';
+import { applyAuctionAction } from '../_lib/auctionEngine.js';
 
 /*
  * 프로덕션 API — Cloudflare Pages Functions (server/index.js의 Express 라우트 포팅).
@@ -309,6 +310,7 @@ on('GET', '/players/:playerId/profile', async ({ store, riot, params }) => {
 
     return json({
         player,
+        comment: await store.getPlayerComment(player.id),
         scrim: { games: scrim.games, wins: scrim.wins },
         accounts: results,
         recent,
@@ -509,6 +511,66 @@ on('POST', '/tournament/codes/:code/collect', async ({ store, riot, params }) =>
 });
 
 /*
+ * --- 경매 상태 공유 (실시간 관전) ---
+ * 진행자가 경매 상태를 주기적으로 올리면(PUT) 같은 그룹 멤버가 폴링(GET)으로 함께 본다.
+ */
+
+on('GET', '/groups/:groupId/auction', async ({ store, params, url }) => {
+    const row = await store.getAuctionState(params.groupId);
+    if (!row) return json({ state: null, updatedAt: null, rev: null });
+    // 조건부 폴링 — 클라이언트가 마지막으로 본 rev와 같으면 초경량 응답 (대역폭·부하 절감)
+    const since = url.searchParams.get('rev');
+    if (since != null && String(row.rev) === since) return json({ unchanged: true, rev: row.rev });
+    let parsed = null;
+    try { parsed = JSON.parse(row.state); } catch { /* 손상된 상태는 없음 처리 */ }
+    return json({ state: parsed, updatedAt: row.updatedAt, rev: row.rev });
+});
+
+on('PUT', '/groups/:groupId/auction', async ({ store, params, body }) => {
+    if (!body?.state || typeof body.state !== 'object') return json({ error: '잘못된 경매 상태입니다.' }, 400);
+    const raw = JSON.stringify(body.state);
+    if (raw.length > 200000) return json({ error: '경매 상태가 너무 큽니다.' }, 413);
+    if (!(await store.getGroup(params.groupId))) return json({ error: '그룹을 찾을 수 없습니다.' }, 404);
+    await store.saveAuctionState(params.groupId, raw);
+    return json({ ok: true });
+});
+
+/*
+ * --- 팀장 제어 방식 서버 액션 (진행자 없음 · 누구나 액션 가능) ---
+ * 서버가 단일 권위로 상태를 바꾼다. 동시 액션은 rev 기반 낙관적 잠금(CAS)으로 직렬화해
+ * 입찰 유실을 막는다. action: draw / bid / resolve / endNow
+ */
+const mutateAuction = async (store, groupId, mutate) => {
+    for (let i = 0; i < 6; i += 1) {
+        const row = await store.getAuctionState(groupId);
+        if (!row) return null;
+        let state;
+        try { state = JSON.parse(row.state); } catch { return null; }
+        const next = mutate(state);
+        if (next === state) return { state, rev: row.rev }; // 변경 없음 (no-op) — 동시 draw/종료 등
+        if (await store.casAuctionState(groupId, JSON.stringify(next), row.rev)) return { state: next, rev: row.rev + 1 };
+        await sleep(12 * (i + 1)); // 충돌 시 짧은 백오프 후 재시도
+    }
+    return null;
+};
+
+on('POST', '/groups/:groupId/auction/action', async ({ store, params, body }) => {
+    const type = String(body?.type ?? '');
+    if (!['draw', 'bid', 'resolve', 'endNow'].includes(type)) return json({ error: '알 수 없는 액션입니다.' }, 400);
+    const res = await mutateAuction(store, params.groupId, (state) => applyAuctionAction(state, body));
+    if (!res) return json({ error: '진행 중인 경매가 없습니다.' }, 404);
+    return json({ ok: true, state: res.state, rev: res.rev });
+});
+
+/* --- 참가자 코멘트 --- */
+on('PUT', '/players/:playerId/comment', async ({ store, params, body }) => {
+    const player = await store.getPlayer(params.playerId);
+    if (!player) return json({ error: '참가자를 찾을 수 없습니다.' }, 404);
+    await store.setPlayerComment(params.playerId, String(body?.comment ?? '').slice(0, 1000));
+    return json({ ok: true });
+});
+
+/*
  * --- 문의/건의 ---
  * D1에 먼저 저장(유실 방지)하고, 무료 메일 릴레이로 운영자 메일로 전달한다.
  * 1순위 Web3Forms(시크릿 WEB3FORMS_KEY 필요) → 2순위 FormSubmit. 릴레이가 모두
@@ -594,7 +656,7 @@ export async function onRequest(context) {
         }
 
         try {
-            const body = ['POST', 'PUT', 'PATCH'].includes(request.method)
+            const body = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
                 ? await request.json().catch(() => null)
                 : null;
             const ctx = {

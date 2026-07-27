@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
-import { CompactButton, ModalContent, ModalOverlay } from '../../App.styles';
+import { CompactButton, ModalContent, ModalOverlay, PrimaryButton } from '../../App.styles';
 import type { PlayerProfile } from '../../services/api';
+import { savePlayerComment } from '../../services/api';
 import { fieldLabel, formatFieldValue, VALUE_LABELS_KO } from '../../services/fieldLabels';
 import type { DetailLang } from '../../services/fieldLabels';
 import { useGameAssets } from '../../services/champions';
@@ -37,6 +38,25 @@ export const PlayerDetailModal = ({ profile, onClose }: {
 
     const { champNames, champKeys, runeNames, spellNames } = useGameAssets();
     const { player, scrim, accounts, recent, aggregate } = profile;
+
+    // 참가자 코멘트 (자유 메모) — 편집 후 저장
+    const [comment, setComment] = useState(profile.comment ?? '');
+    const [commentBusy, setCommentBusy] = useState(false);
+    const [commentStatus, setCommentStatus] = useState('');
+    const dirty = comment.trim() !== (profile.comment ?? '').trim();
+    const saveComment = async () => {
+        setCommentBusy(true);
+        setCommentStatus('');
+        try {
+            await savePlayerComment(player.id, comment.trim());
+            profile.comment = comment.trim(); // 모달 유지 중 재편집 기준값 갱신
+            setCommentStatus(lang === 'ko' ? '저장됨' : 'Saved');
+            setTimeout(() => setCommentStatus(''), 1500);
+        } catch {
+            setCommentStatus(lang === 'ko' ? '저장 실패' : 'Failed');
+        }
+        setCommentBusy(false);
+    };
     const scrimRate = scrim.games === 0 ? null : Math.round((scrim.wins / scrim.games) * 100);
     const rankedTotal = aggregate.totalRankedWins + aggregate.totalRankedLosses;
     const rankedRate = rankedTotal === 0 ? null : Math.round((aggregate.totalRankedWins / rankedTotal) * 100);
@@ -119,6 +139,27 @@ export const PlayerDetailModal = ({ profile, onClose }: {
                         </span>
                     </SummaryBox>
                 </SummaryRow>
+
+                {/* 참가자 코멘트 — 자유 메모 (한 사람 당 하나, 그룹 공용) */}
+                <CommentSection>
+                    <div className="head">
+                        <SubTitle style={{ margin: 0 }}>{lang === 'ko' ? '코멘트' : 'Comment'}</SubTitle>
+                        {commentStatus && <em className="status">{commentStatus}</em>}
+                    </div>
+                    <CommentArea
+                        value={comment}
+                        maxLength={1000}
+                        placeholder={lang === 'ko'
+                            ? '이 참가자에 대한 메모 (예: 주 라인, 챔피언 폭, 성향 등) — 그룹원이 함께 봅니다.'
+                            : 'Notes about this player — visible to your group.'}
+                        onChange={e => setComment(e.target.value)}
+                    />
+                    <div className="actions">
+                        <PrimaryButton onClick={saveComment} disabled={commentBusy || !dirty}>
+                            {commentBusy ? (lang === 'ko' ? '저장 중...' : 'Saving...') : (lang === 'ko' ? '코멘트 저장' : 'Save')}
+                        </PrimaryButton>
+                    </div>
+                </CommentSection>
 
                 {/* 최근 경기 경향 — Match-V5 최근 매치 집계 (전 계정 합산) */}
                 {recent.sampleSize > 0 && (
@@ -348,6 +389,43 @@ const SubTitle = styled.h5`
         color: ${({ theme }) => theme.placeholder};
         font-weight: 600;
     }
+`;
+
+const CommentSection = styled.section`
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .head {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .status { font-style: normal; font-size: 0.75rem; color: ${({ theme }) => theme.accent}; font-weight: 700; }
+    }
+
+    .actions { display: flex; justify-content: flex-end; }
+`;
+
+const CommentArea = styled.textarea`
+    width: 100%;
+    min-height: 70px;
+    resize: vertical;
+    padding: 0.55rem 0.7rem;
+    font-family: inherit;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: ${({ theme }) => theme.text};
+    background: ${({ theme }) => theme.body};
+    border: 1px solid ${({ theme }) => theme.cardBorder};
+    border-radius: var(--radius-md);
+
+    &::placeholder { color: ${({ theme }) => theme.placeholder}; }
+    &:focus { outline: 1px solid ${({ theme }) => theme.accent}; }
 `;
 
 const RecentSection = styled.section`
