@@ -27,13 +27,22 @@ import { AuctionTab } from './components/AuctionTab';
 import { FeedbackModal } from './components/FeedbackModal';
 import { RecentNamesList } from './components/RecentNames';
 import { BuilderTips } from './components/BuilderTips';
+import { PointsTab } from './components/PointsTab';
+import { LadderTab } from './components/LadderTab';
 
-// URL 분리: #/builder = 팀 빌더, #/records = 내전 기록, #/auction = 롤 경매 (해시 라우팅 — 새로고침해도 탭 유지)
-type View = 'builder' | 'history' | 'auction';
+// URL 분리: #/builder · #/records · #/auction · #/points · #/ladder (해시 라우팅 — 새로고침해도 탭 유지)
+type View = 'builder' | 'history' | 'auction' | 'points' | 'ladder';
 const viewFromHash = (): View =>
     window.location.hash.startsWith('#/records') ? 'history'
     : window.location.hash.startsWith('#/auction') ? 'auction'
+    : window.location.hash.startsWith('#/points') ? 'points'
+    : window.location.hash.startsWith('#/ladder') ? 'ladder'
     : 'builder';
+
+const HASH: Record<View, string> = {
+    builder: '#/builder', history: '#/records', auction: '#/auction',
+    points: '#/points', ladder: '#/ladder',
+};
 
 const App = () => {
     const [view, setView] = useState<View>(viewFromHash);
@@ -50,9 +59,7 @@ const App = () => {
         delete document.documentElement.dataset.boot;
     }, []);
 
-    const go = (next: View) => {
-        window.location.hash = next === 'history' ? '#/records' : next === 'auction' ? '#/auction' : '#/builder';
-    };
+    const go = (next: View) => { window.location.hash = HASH[next]; };
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -86,6 +93,8 @@ const App = () => {
                         >
                             경매
                         </TabButton>
+                        <TabButton $active={view === 'points'} onClick={() => go('points')}>포인트</TabButton>
+                        <TabButton $active={view === 'ladder'} onClick={() => go('ladder')}>운세·사다리</TabButton>
                         {/* 그룹 배지 + 테마 버튼 — 탭 바 오른쪽 인라인 배치 */}
                         <AppHeader />
                     </TabBar>
@@ -107,8 +116,12 @@ const App = () => {
                         </BuilderLayout>
                     ) : view === 'history' ? (
                         <MatchHistory />
-                    ) : (
+                    ) : view === 'auction' ? (
                         <AuctionTab />
+                    ) : view === 'points' ? (
+                        <PointsTab />
+                    ) : (
+                        <LadderTab />
                     )}
                 </AppContainer>
 

@@ -18,8 +18,8 @@ const sendMail = async (message: string, contact: string): Promise<boolean> => {
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({
                 access_key: WEB3FORMS_KEY,
-                subject: '[내전팟] 문의/건의',
-                from_name: '내전팟 문의',
+                subject: '[팀툴] 문의/건의',
+                from_name: '팀툴 문의',
                 message: `${message}\n\n— 답장 연락처: ${contact || '(미기재)'}`,
             }),
         });

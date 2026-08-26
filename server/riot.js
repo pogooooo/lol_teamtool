@@ -86,6 +86,22 @@ export const getMasteryScore = async (puuid) => {
     }
 };
 
+/**
+ * Match-V5: 특정 시점 이후의 매치 ID — 최근 활동량(며칠간 몇 판) 산정용.
+ * 매치 상세를 받지 않고 개수만 세므로 호출 1회로 끝난다.
+ */
+export const listMatchIdsSince = async (puuid, startTimeSec, count = 30) => {
+    try {
+        const { data } = await riot.get(
+            `${ASIA}/lol/match/v5/matches/by-puuid/${puuid}/ids`,
+            { params: { startTime: startTimeSec, start: 0, count } },
+        );
+        return data;
+    } catch (e) {
+        throw wrap(e);
+    }
+};
+
 /** Match-V5: 최근 매치 ID (큐 무관) — 룬/스펠/챔피언 선호 집계용 */
 export const listRecentMatchIds = async (puuid, count = 10) => {
     try {

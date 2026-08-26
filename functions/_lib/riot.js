@@ -72,6 +72,13 @@ export const makeRiot = (key) => ({
     listRecentMatchIds: (puuid, count = 10) =>
         call(key, `${ASIA}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`),
 
+    /**
+     * Match-V5: 특정 시점 이후의 매치 ID — 최근 활동량(며칠간 몇 판) 산정용.
+     * 매치 상세를 받지 않고 개수만 세므로 서브리퀘스트 1회로 끝난다.
+     */
+    listMatchIdsSince: (puuid, startTimeSec, count = 30) =>
+        call(key, `${ASIA}/lol/match/v5/matches/by-puuid/${puuid}/ids?startTime=${startTimeSec}&start=0&count=${count}`),
+
     /** Match-V5: 최근 사용자 지정 게임(queueId 0) 매치 ID 목록 */
     listCustomMatchIds: (puuid, count = 10) =>
         call(key, `${ASIA}/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=0&start=0&count=${count}`),

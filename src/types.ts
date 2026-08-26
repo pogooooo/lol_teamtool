@@ -1,19 +1,34 @@
-export type Tier = '상' | '중' | '하';
+/** 롤 티어 (아이언~챌린저) */
+export type Tier =
+    | 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum'
+    | 'emerald' | 'diamond' | 'master' | 'grandmaster' | 'challenger';
 export type Position = '탑' | '정글' | '미드' | '원딜' | '서포터';
 export type OperatorSymbol = '>' | '>=' | '=' | '<=' | '<';
-export type SlotKey = 'name1' | 'name2' | 'temp';
+/** 팀 슬롯 = 팀 번호 (0부터) */
+export type SlotKey = number;
 
 export interface Player {
     name: string;
-    tier: Tier | null;
+    /** 구버전 필드 — 로드 시 baseRank로 옮긴다 */
+    tier?: Tier | null;
+    /**
+     * 직접 지정한 기본 티어 (예: 'platinum:II'). 비어 있으면 롤 최고 솔랭(없으면 자랭)을 쓴다.
+     * 그룹에 속한 참가자면 서버에도 함께 저장된다.
+     */
+    baseRank?: string | null;
+    /** 자동 계산된 최종 점수에 사용자가 더한 값 (+/−) */
+    scoreAdjust?: number;
+    /** 희망 라인 — 앞에 있을수록 높은 지망 (1지망, 2지망 …) */
+    wishes?: Position[];
 }
 
 export interface LaneState {
-    name1: string | null;
-    name2: string | null;
-    /** 라인 옆 임시 대기 슬롯 — 여러 명을 얹어둘 수 있다 */
+    /** 팀별 배치 — 인덱스가 팀 번호 (0=1팀, 1=2팀 …) */
+    slots: (string | null)[];
+    /** 구버전 필드 (로드 시 마이그레이션 후 무시) */
     temps?: string[];
-    /** 구버전 단일 임시 슬롯 (로드 시 temps로 마이그레이션) */
+    name1?: string | null;
+    name2?: string | null;
     temp?: string | null;
     operator: OperatorSymbol;
 }
@@ -25,8 +40,10 @@ export type DragOrigin =
     | { type: 'slot'; position: Position; slot: SlotKey };
 
 export type DragTarget =
-    | { type: 'pool'; tier: Tier }
-    | { type: 'slot'; position: Position; slot: SlotKey };
+    | { type: 'pool' }
+    | { type: 'slot'; position: Position; slot: SlotKey }
+    /** 희망 라인 칸 — 떨어뜨리면 그 라인을 지망 목록에 추가 (배치는 그대로) */
+    | { type: 'wish'; position: Position };
 
 export interface DraggedItem {
     name: string;

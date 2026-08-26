@@ -11,7 +11,7 @@ export const HelpSection = () => (
         <h3>도움말 &amp; 읽을거리</h3>
 
         <details>
-            <summary>내전팟은 어떤 서비스인가요?</summary>
+            <summary>팀툴은 어떤 서비스인가요?</summary>
             <p>
                 친구·동아리·직장 모임의 리그 오브 레전드 내전을 위한 무료 도구입니다.
                 티어별 드래그 앤 드롭으로 5:5 팀 밸런스를 맞추는 팀 빌더와, 그룹 참여 코드로
@@ -52,7 +52,7 @@ export const HelpSection = () => (
         </details>
 
         <Legal>
-            내전팟은 라이엇 게임즈(Riot Games)의 공식 제품이 아니며, 라이엇 게임즈의 보증을 받지 않았습니다.
+            팀툴은 라이엇 게임즈(Riot Games)의 공식 제품이 아니며, 라이엇 게임즈의 보증을 받지 않았습니다.
             리그 오브 레전드와 관련 자산은 라이엇 게임즈의 상표 또는 등록 상표입니다.
         </Legal>
     </HelpCard>

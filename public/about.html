@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팀툴 소개 | 팀툴</title>
+    <meta name="description" content="팀툴(lol_teamtool)은 리그 오브 레전드 내전을 위한 무료 웹 도구입니다. 만든 이유, 제공 기능, 데이터 처리 원칙, 운영 방식을 소개합니다." />
+    <meta name="keywords" content="팀툴, 팀툴 소개, lol_teamtool, 롤 내전 도구" />
+    <link rel="icon" href="/team_icon.png" />
+    <link rel="canonical" href="https://lol-teamtool.pages.dev/about" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1494698073875494" crossorigin="anonymous"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #F9F8F6; color: #3B352C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', Roboto, sans-serif; font-size: 16px; line-height: 1.75; }
+        .container { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+        nav.top { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 2rem; font-size: 0.88rem; }
+        nav.top a { color: #8A7358; text-decoration: none; font-weight: 600; }
+        nav.top a:hover { text-decoration: underline; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .lead { color: #8A7D6B; margin-bottom: 2rem; }
+        h2 { font-size: 1.25rem; margin: 2.25rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D9CFC7; }
+        p, li { margin-bottom: 0.5rem; }
+        ol, ul { padding-left: 1.4rem; margin-bottom: 0.75rem; }
+        .card { background: #EFE9E3; border: 1px solid #D9CFC7; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
+        .ad-slot { margin: 2rem 0; text-align: center; }
+        .related { background: #EFE9E3; border: 1px solid #D9CFC7; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 2.5rem; }
+        .related h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .related a { color: #8A7358; font-weight: 600; text-decoration: none; }
+        .related a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-top: 2.5rem; padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #8A7D6B 0%, #8A7358 100%); color: #F9F8F6; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        footer.legal { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 2rem; font-size: 0.72rem; color: #A99F8F; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1rem; font-size: 0.9rem; }
+        th, td { border: 1px solid #D9CFC7; padding: 0.45rem 0.6rem; text-align: left; }
+        th { background: #EFE9E3; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="top">
+        <a href="/">← 팀 빌더</a>
+        <a href="/guide.html">사용법</a>
+        <a href="/tips.html">운영 가이드</a>
+        <a href="/articles.html">글 모음</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <h1>팀툴 소개</h1>
+    <p class="lead">팀툴은 “팀 밸런스 누가 맞출래?”로 시작되는 10분의 실랑이를 없애고 싶어서 만든 도구입니다.</p>
+
+
+    <h2>왜 만들었나</h2>
+    <p>
+        열 명이 모이면 게임보다 팀 나누기가 먼저 싸움이 됩니다. 티어를 물어보고, 엑셀에 적고,
+        누가 봐도 한쪽이 세 보이는 팀이 나오고, 다시 섞고 — 이 과정을 매주 반복하는 모임을 위해
+        만들기 시작한 것이 팀툴(lol_teamtool, LoL In-house Team Tool)입니다.
+        지금은 팀 밸런싱을 넘어 전적 기록, 경매 드래프트, 포인트 놀이까지 내전 하루 전체를 다루는 도구가 되었습니다.
+    </p>
+    <h2>무엇을 할 수 있나</h2>
+    <ul>
+        <li><strong>팀 빌더</strong> — 라이엇 계정 연동으로 티어·활동량·승률을 불러와 점수를 계산하고, 자동 분배로 팀 간 총점 차이를 최소화합니다.</li>
+        <li><strong>내전 기록</strong> — 그룹 참여 코드로 모임을 만들면 커스텀 게임 전적이 자동으로 쌓이고, 승률·듀오·챔피언 통계를 제공합니다.</li>
+        <li><strong>경매</strong> — 타이머·유찰·실시간 입찰을 지원하는 옥션 드래프트.</li>
+        <li><strong>포인트</strong> — 출석·승리 포인트로 미니게임을 즐기고 칭호·이름표 장식을 모으는 그룹 놀이터. 전부 무료 게임 점수이며 현금과 무관합니다.</li>
+    </ul>
+    <h2>데이터를 다루는 원칙</h2>
+    <ul>
+        <li>롤 계정 <strong>비밀번호를 요구하지 않습니다.</strong> 라이엇 ID(게임명#태그)로 공개 전적·랭크 정보만 조회합니다.</li>
+        <li>팀 빌더 입력값은 브라우저에만 저장되고, 그룹 데이터는 참여 코드를 아는 사람만 접근할 수 있습니다.</li>
+        <li>모든 기능은 무료이며 운영비는 광고로만 충당합니다. 자세한 내용은 <a href="/privacy.html">개인정보처리방침</a>을 참고하세요.</li>
+    </ul>
+    <h2>문의</h2>
+    <p>
+        버그 제보와 기능 제안은 언제나 환영합니다. 앱 우측 하단의 <strong>문의·건의</strong> 버튼 또는
+        <a href="mailto:pogooo1103@gmail.com">pogooo1103@gmail.com</a>으로 보내 주세요.
+        실제 사용자 제안으로 추가된 기능이 이미 여럿 있습니다.
+    </p>
+
+
+    <div class="ad-slot">
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1494698073875494" data-ad-slot="6344413074" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    </div>
+
+    <div class="related">
+        <h3>함께 읽으면 좋은 글</h3>
+        <ul>
+            <li><a href="/balance-theory.html">롤 팀 밸런싱의 이론 — 티어 숫자만 보면 안 되는 이유</a></li>
+            <li><a href="/formats.html">10인 내전 대진 방식 총정리 — 단판부터 경매전까지</a></li>
+            <li><a href="/use-data.html">내전 기록 데이터 활용법 — 승률표 너머 읽기</a></li>
+        </ul>
+    </div>
+
+    <a class="back" href="/">팀 빌더로 팀 짜러 가기 →</a>
+</div>
+<footer class="legal">
+    팀툴은 라이엇 게임즈(Riot Games)의 공식 제품이 아니며, 라이엇 게임즈의 보증을 받지 않았습니다.
+    리그 오브 레전드(League of Legends)와 관련 자산은 라이엇 게임즈의 상표 또는 등록 상표입니다.
+</footer>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</body>
+</html>

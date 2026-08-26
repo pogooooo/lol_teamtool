@@ -1,12 +1,7 @@
 import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import type { DefaultTheme } from 'styled-components';
 import type { Tier } from './types';
-
-export const TIER_COLORS = {
-    상: '#52B788',
-    중: '#0077B6',
-    하: '#F7B801',
-};
+import { TIER_META } from './constants';
 
 /*
  * 팔레트 정의는 DESIGN.md 참고.
@@ -34,7 +29,6 @@ export const lightTheme: DefaultTheme = {
     grass1: '#A9DFC1',
     grass2: '#52B788',
     grass3: '#1E7A54',
-    ...TIER_COLORS
 };
 
 export const darkTheme: DefaultTheme = {
@@ -58,7 +52,6 @@ export const darkTheme: DefaultTheme = {
     grass1: '#3E7A5C',
     grass2: '#57B384',
     grass3: '#95E3B8',
-    ...TIER_COLORS
 };
 
 export const GlobalStyle = createGlobalStyle`
@@ -361,8 +354,8 @@ export const TierLabel = styled.h3<{ $tierColor?: string }>`
 `;
 
 const captainGlow = keyframes`
-    0%, 100% { box-shadow: 0 0 6px 1px rgba(255,214,102,0.85), 0 0 14px 3px rgba(255,190,60,0.55); }
-    50% { box-shadow: 0 0 10px 3px rgba(255,214,102,1), 0 0 22px 6px rgba(255,190,60,0.75); }
+    0%, 100% { box-shadow: 0 0 3px 0 rgba(255,214,102,0.55), 0 0 7px 1px rgba(255,190,60,0.3); }
+    50% { box-shadow: 0 0 5px 1px rgba(255,214,102,0.7), 0 0 10px 2px rgba(255,190,60,0.42); }
 `;
 
 export const DraggableName = styled.div<{ $inSlot?: boolean; tier?: Tier | null; $captain?: boolean }>`
@@ -381,10 +374,28 @@ export const DraggableName = styled.div<{ $inSlot?: boolean; tier?: Tier | null;
     transition: transform 0.2s ease;
     width: ${({ $inSlot }) => ($inSlot ? '100%' : 'auto')};
     min-width: 72px;
-    border: 3px solid ${({ theme, tier }) => tier ? theme[tier] : 'transparent'};
-    /* 팀장: 은은한 골드 글로우 (아이콘 없이 표시). 더블클릭으로 토글 */
+    position: relative;
+    display: flex;
+    gap: 5px;
+    border: 3px solid ${({ tier }) => tier ? TIER_META[tier].color : 'transparent'};
+    /* 팀장: 은은한 골드 글로우 + 이름 위에 왕관. 더블클릭으로 토글 */
     ${({ $captain }) => $captain
-        ? css`animation: ${captainGlow} 1.8s ease-in-out infinite;`
+        ? css`
+            animation: ${captainGlow} 1.8s ease-in-out infinite;
+            /* 이름 위 왕관 — 단순한 SVG (이모지 대신, 귀엽고 통일된 모양) */
+            &::before {
+                content: '';
+                position: absolute;
+                top: -0.62em;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 1.3em;
+                height: 1em;
+                background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 22' fill='none' stroke='%23FFD060' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M3 19V8.5l6 4.2L15 4l6 8.5 6-4.2V19z'/%3E%3Cpath d='M3 15.6h24'/%3E%3C/svg%3E") center / contain no-repeat;
+                filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+                pointer-events: none;
+            }
+        `
         : css`box-shadow: 0 1px 3px rgba(0,0,0,0.1);`}
 
     &:active {

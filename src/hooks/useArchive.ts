@@ -19,6 +19,8 @@ export const useArchive = () => {
     const [activeGroupId, setActiveGroupId] = useState<string | null>(() => localStorage.getItem(ACTIVE_KEY));
     const [players, setPlayers] = useState<GroupPlayer[]>([]);
     const [accounts, setAccounts] = useState<RiotAccount[]>([]);
+    // 참가자별 라인 티어 — 참가자 관리 화면에서 직접 지정한다
+    const [laneTiers, setLaneTiers] = useState<api.LaneTierRow[]>([]);
     const [matches, setMatches] = useState<MatchRecord[]>([]);
     const [stats, setStats] = useState<GroupStats | null>(null);
 
@@ -34,6 +36,7 @@ export const useArchive = () => {
         ]);
         setPlayers(roster.players);
         setAccounts(roster.accounts);
+        setLaneTiers(roster.laneTiers ?? []);
         setMatches(matchList);
         setStats(groupStats);
     }, []);
@@ -62,6 +65,7 @@ export const useArchive = () => {
         else {
             setPlayers([]);
             setAccounts([]);
+            setLaneTiers([]);
             setMatches([]);
             setStats(null);
         }
@@ -119,6 +123,25 @@ export const useArchive = () => {
         setActiveGroupBadge(activeGroup?.name ?? null);
     }, [activeGroup?.name]);
 
+    // 헤더의 그룹 전환 메뉴 등 외부에서 그룹이 바뀌면 따라간다
+    useEffect(() => {
+        const sync = () => {
+            const next = localStorage.getItem(ACTIVE_KEY);
+            setActiveGroupId(prev => {
+                if (prev === next) return prev;
+                if (next) refreshGroupData(next).catch(() => setServerOk(false));
+                else { setPlayers([]); setAccounts([]); setLaneTiers([]); setMatches([]); setStats(null); }
+                return next;
+            });
+        };
+        window.addEventListener('lol_teamtool:groupbadge', sync);
+        window.addEventListener('storage', sync);
+        return () => {
+            window.removeEventListener('lol_teamtool:groupbadge', sync);
+            window.removeEventListener('storage', sync);
+        };
+    }, [refreshGroupData]);
+
     return {
         serverOk,
         riotReady,
@@ -126,6 +149,7 @@ export const useArchive = () => {
         activeGroup,
         players,
         accounts,
+        laneTiers,
         matches,
         stats,
         createGroup,
@@ -140,6 +164,8 @@ export const useArchive = () => {
             run(() => api.addAccount(playerId, gameName, tagLine)),
         removeAccount: (accountId: string) => run(() => api.removeAccount(accountId)),
         setPrimaryAccount: (accountId: string) => run(() => api.setPrimaryAccount(accountId)),
+        setLaneTier: (playerId: string, position: string, tier: string | null) =>
+            run(() => api.setLaneTier(playerId, position, tier)),
         importMatches: (records: MatchRecord[]) =>
             run(async () => {
                 if (!activeGroupId) return;

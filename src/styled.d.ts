@@ -22,8 +22,5 @@ declare module 'styled-components' {
         grass1: string;
         grass2: string;
         grass3: string;
-        상: string;
-        중: string;
-        하: string;
     }
 }

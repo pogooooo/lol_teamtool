@@ -4,7 +4,7 @@
  * 스키마는 루트의 schema.sql — `npm run db:schema`로 적용한다.
  */
 
-const groupRow = (r) => r && ({ id: r.id, name: r.name, joinCode: r.join_code, createdAt: r.created_at });
+const groupRow = (r) => r && ({ id: r.id, name: r.name, joinCode: r.join_code, createdAt: r.created_at, sheetUrl: r.sheet_url ?? null });
 const playerRow = (r) => r && ({ id: r.id, groupId: r.group_id, displayName: r.display_name });
 const accountRow = (r) => r && ({
     id: r.id, playerId: r.player_id, gameName: r.game_name,
@@ -53,6 +53,10 @@ export const makeStore = (db) => {
                 .bind(id, name, joinCode, createdAt).run();
             return store.getGroup(id);
         },
+
+        /** 연동 구글 시트 주소 저장 (null이면 해제) */
+        setGroupSheet: (groupId, url) =>
+            db.prepare('UPDATE groups SET sheet_url = ? WHERE id = ?').bind(url, groupId).run(),
 
         /* --- 참가자 / 계정 --- */
 
@@ -322,6 +326,201 @@ export const makeStore = (db) => {
                 INSERT INTO player_comments (player_id, comment, updated_at) VALUES (?, ?, ?)
                 ON CONFLICT (player_id) DO UPDATE SET comment = excluded.comment, updated_at = excluded.updated_at
             `).bind(playerId, comment, Date.now()).run(),
+
+        /* --- 라인별 티어 (주최자가 직접 지정) --- */
+
+        listLaneTiers: async (groupId) => {
+            const { results } = await db.prepare(`
+                SELECT lt.player_id AS playerId, lt.position AS position, lt.tier AS tier
+                FROM player_lane_tiers lt
+                JOIN players p ON p.id = lt.player_id
+                WHERE p.group_id = ?
+            `).bind(groupId).all();
+            return results;
+        },
+
+        /** tier가 null이면 지정 해제 */
+        setLaneTier: (playerId, position, tier) => (tier
+            ? db.prepare(`
+                INSERT INTO player_lane_tiers (player_id, position, tier) VALUES (?, ?, ?)
+                ON CONFLICT (player_id, position) DO UPDATE SET tier = excluded.tier
+              `).bind(playerId, position, tier).run()
+            : db.prepare('DELETE FROM player_lane_tiers WHERE player_id = ? AND position = ?')
+                .bind(playerId, position).run()),
+
+        /**
+         * 그룹의 내전 전적을 참가자×라인으로 집계한다.
+         * 같은 사람이라도 라인마다 실력이 다르므로, 팀 빌더 점수에 라인 숙련도를 얹는 데 쓴다.
+         */
+        listLaneStats: async (groupId) => {
+            const { results } = await db.prepare(`
+                SELECT mp.player_id AS playerId, mp.position AS position,
+                       COUNT(*) AS games,
+                       SUM(CASE WHEN mp.side = m.winning_side THEN 1 ELSE 0 END) AS wins
+                FROM match_participants mp
+                JOIN matches m ON m.id = mp.match_id
+                WHERE m.group_id = ? AND mp.player_id IS NOT NULL
+                GROUP BY mp.player_id, mp.position
+            `).bind(groupId).all();
+            return results;
+        },
+
+        /* --- 포인트 --- */
+
+        /** 참가자 포인트 행 (없으면 생성) */
+        ensurePoints: async (groupId, playerId) => {
+            await db.prepare(`
+                INSERT INTO player_points (player_id, group_id, points, updated_at) VALUES (?, ?, 0, ?)
+                ON CONFLICT (player_id) DO NOTHING
+            `).bind(playerId, groupId, Date.now()).run();
+            return db.prepare('SELECT * FROM player_points WHERE player_id = ?').bind(playerId).first();
+        },
+
+        getPoints: (playerId) =>
+            db.prepare('SELECT * FROM player_points WHERE player_id = ?').bind(playerId).first(),
+
+        /**
+         * 포인트 증감. 차감(delta<0)은 잔액이 충분할 때만 반영되도록 조건부 UPDATE를 써서
+         * 동시에 여러 요청이 들어와도 잔액이 음수가 되지 않게 한다.
+         */
+        addPoints: async (groupId, playerId, delta, reason) => {
+            const need = delta < 0 ? -delta : 0;
+            const res = await db.prepare(
+                'UPDATE player_points SET points = points + ?, updated_at = ? WHERE player_id = ? AND points >= ?'
+            ).bind(delta, Date.now(), playerId, need).run();
+            if ((res.meta?.changes ?? 0) === 0) return null; // 잔액 부족
+
+            const row = await db.prepare('SELECT points FROM player_points WHERE player_id = ?').bind(playerId).first();
+            const balance = row?.points ?? 0;
+            await db.prepare(
+                'INSERT INTO point_log (id, group_id, player_id, delta, reason, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).bind(crypto.randomUUID(), groupId, playerId, delta, reason, balance, Date.now()).run();
+            return balance;
+        },
+
+        /** 그룹 포인트 랭킹 (참가자 이름 포함) */
+        listGroupPoints: async (groupId) => {
+            const { results } = await db.prepare(`
+                SELECT pp.player_id AS playerId, p.display_name AS displayName,
+                       pp.points AS points, pp.title AS title, pp.frame AS frame, pp.bg AS bg,
+                       CASE WHEN pp.pin IS NULL THEN 0 ELSE 1 END AS hasPin
+                FROM player_points pp
+                JOIN players p ON p.id = pp.player_id
+                WHERE pp.group_id = ?
+                ORDER BY pp.points DESC, p.display_name
+            `).bind(groupId).all();
+            return results;
+        },
+
+        listPointLog: async (playerId, limit = 20) => {
+            const { results } = await db.prepare(
+                'SELECT delta, reason, balance, created_at AS createdAt FROM point_log WHERE player_id = ? ORDER BY created_at DESC LIMIT ?'
+            ).bind(playerId, limit).all();
+            return results;
+        },
+
+        /** 하루 1회 행동 — 처음이면 true, 이미 했으면 false */
+        claimDaily: async (playerId, kind, day) => {
+            const res = await db.prepare(
+                'INSERT INTO daily_claims (player_id, kind, day) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
+            ).bind(playerId, kind, day).run();
+            return (res.meta?.changes ?? 0) > 0;
+        },
+
+        /** 최근 연속 출석 일수 */
+        checkinStreak: async (playerId) => {
+            const { results } = await db.prepare(
+                "SELECT day FROM daily_claims WHERE player_id = ? AND kind = 'checkin' ORDER BY day DESC LIMIT 14"
+            ).bind(playerId).all();
+            return results.map(r => r.day);
+        },
+
+        /* --- PIN (간이 계정) --- */
+
+        setPin: (playerId, pin) =>
+            db.prepare('UPDATE player_points SET pin = ?, updated_at = ? WHERE player_id = ?')
+                .bind(pin, Date.now(), playerId).run(),
+
+        /* --- 상점 --- */
+
+        listInventory: async (playerId) => {
+            const { results } = await db.prepare('SELECT item_id AS itemId FROM inventory WHERE player_id = ?')
+                .bind(playerId).all();
+            return results.map(r => r.itemId);
+        },
+
+        addInventory: async (playerId, itemId) => {
+            const res = await db.prepare(
+                'INSERT INTO inventory (player_id, item_id, acquired_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
+            ).bind(playerId, itemId, Date.now()).run();
+            return (res.meta?.changes ?? 0) > 0;
+        },
+
+        equipItem: (playerId, kind, itemId) => {
+            const col = kind === 'title' ? 'title' : kind === 'bg' ? 'bg' : 'frame';
+            return db.prepare(`UPDATE player_points SET ${col} = ?, updated_at = ? WHERE player_id = ?`)
+                .bind(itemId, Date.now(), playerId).run();
+        },
+
+        /* --- 베팅 판 (그룹 공유) --- */
+
+        addBetRound: ({ id, groupId, title, choices, creatorId }) =>
+            db.prepare('INSERT INTO bet_rounds (id, group_id, title, choices, status, creator_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                .bind(id, groupId, title, JSON.stringify(choices), 'open', creatorId, Date.now()).run(),
+
+        getBetRound: (roundId) =>
+            db.prepare('SELECT * FROM bet_rounds WHERE id = ?').bind(roundId).first(),
+
+        listBetRounds: async (groupId, limit = 8) => {
+            const { results } = await db.prepare(`
+                SELECT br.*, p.display_name AS creatorName
+                FROM bet_rounds br LEFT JOIN players p ON p.id = br.creator_id
+                WHERE br.group_id = ?
+                ORDER BY (br.status IN ('open','locked')) DESC, br.created_at DESC
+                LIMIT ?
+            `).bind(groupId, limit).all();
+            return results;
+        },
+
+        setBetRoundStatus: (roundId, status, winner = null) =>
+            db.prepare('UPDATE bet_rounds SET status = ?, winner = ? WHERE id = ?')
+                .bind(status, winner, roundId).run(),
+
+        /* --- 베팅 --- */
+
+        addBet: ({ id, groupId, subject, playerId, choice, amount }) =>
+            db.prepare('INSERT INTO bets (id, group_id, subject, player_id, choice, amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                .bind(id, groupId, subject, playerId, choice, amount, 'open', Date.now()).run(),
+
+        listBets: async (groupId, subject) => {
+            const { results } = await db.prepare(`
+                SELECT b.id, b.player_id AS playerId, p.display_name AS displayName,
+                       b.choice, b.amount, b.status
+                FROM bets b LEFT JOIN players p ON p.id = b.player_id
+                WHERE b.group_id = ? AND b.subject = ?
+                ORDER BY b.created_at
+            `).bind(groupId, subject).all();
+            return results;
+        },
+
+        openBetsOf: async (groupId, subject) => {
+            const { results } = await db.prepare(
+                "SELECT * FROM bets WHERE group_id = ? AND subject = ? AND status = 'open'"
+            ).bind(groupId, subject).all();
+            return results;
+        },
+
+        markBet: (betId, status) =>
+            db.prepare('UPDATE bets SET status = ? WHERE id = ?').bind(status, betId).run(),
+
+        /* --- 내전 승리 포인트 중복 방지 --- */
+
+        claimMatchReward: async (groupId, matchId) => {
+            const res = await db.prepare(
+                'INSERT INTO match_rewards (match_id, group_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
+            ).bind(matchId, groupId, Date.now()).run();
+            return (res.meta?.changes ?? 0) > 0;
+        },
 
         /* --- 문의/건의 --- */
 

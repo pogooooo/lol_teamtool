@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내전 기록 데이터 활용법 — 승률표 너머 읽기 | 팀툴</title>
+    <meta name="description" content="쌓인 내전 전적 데이터에서 팀 배분 힌트를 뽑아내는 방법. 개인 승률의 함정, 듀오 승률 읽는 법, 챔피언 통계 활용, 기록 문화 만들기까지 다룹니다." />
+    <meta name="keywords" content="내전 전적, 내전 통계, 듀오 승률, 내전 기록, 데이터 분석, 팀툴" />
+    <link rel="icon" href="/team_icon.png" />
+    <link rel="canonical" href="https://lol-teamtool.pages.dev/use-data" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1494698073875494" crossorigin="anonymous"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #F9F8F6; color: #3B352C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', Roboto, sans-serif; font-size: 16px; line-height: 1.75; }
+        .container { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+        nav.top { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 2rem; font-size: 0.88rem; }
+        nav.top a { color: #8A7358; text-decoration: none; font-weight: 600; }
+        nav.top a:hover { text-decoration: underline; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .lead { color: #8A7D6B; margin-bottom: 2rem; }
+        h2 { font-size: 1.25rem; margin: 2.25rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D9CFC7; }
+        p, li { margin-bottom: 0.5rem; }
+        ol, ul { padding-left: 1.4rem; margin-bottom: 0.75rem; }
+        .card { background: #EFE9E3; border: 1px solid #D9CFC7; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
+        .ad-slot { margin: 2rem 0; text-align: center; }
+        .related { background: #EFE9E3; border: 1px solid #D9CFC7; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 2.5rem; }
+        .related h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .related a { color: #8A7358; font-weight: 600; text-decoration: none; }
+        .related a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-top: 2.5rem; padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #8A7D6B 0%, #8A7358 100%); color: #F9F8F6; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        footer.legal { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 2rem; font-size: 0.72rem; color: #A99F8F; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1rem; font-size: 0.9rem; }
+        th, td { border: 1px solid #D9CFC7; padding: 0.45rem 0.6rem; text-align: left; }
+        th { background: #EFE9E3; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="top">
+        <a href="/">← 팀 빌더</a>
+        <a href="/guide.html">사용법</a>
+        <a href="/tips.html">운영 가이드</a>
+        <a href="/articles.html">글 모음</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <h1>내전 기록 데이터 활용법 — 승률표 너머 읽기</h1>
+    <p class="lead">기록이 열 판만 쌓여도 감으로는 안 보이던 것이 보이기 시작합니다. 숫자를 오해하지 않으면서 다음 내전의 팀 배분에 써먹는 방법을 정리했습니다.</p>
+
+
+    <h2>1. 개인 승률의 함정부터 알기</h2>
+    <p>
+        내전 개인 승률은 표본이 작습니다. 10판에서 7승은 대단해 보이지만 동전 던지기로도 17% 확률로 나오는 결과입니다.
+        승률 수치는 20판 이상 쌓였을 때부터 신뢰하고, 그 전까지는 “경향” 정도로만 읽으세요.
+        특히 잘하는 사람과 자주 같은 팀이었던 사람의 승률은 부풀려져 있습니다 — 팀 게임의 승률은 절반이 팀운입니다.
+    </p>
+    <h2>2. 진짜 정보는 듀오 승률에 있다</h2>
+    <p>
+        개인 승률보다 유용한 것이 <strong>같은 팀 조합별 승률</strong>입니다.
+        “A와 B가 같은 팀이면 유독 강하다”는 봇 듀오 호흡, 오더 합, 성격 궁합까지 반영된 종합 지표라서
+        티어 숫자가 못 잡는 시너지를 보여 줍니다. 승률 80%짜리 듀오를 발견했다면 다음 내전에선 갈라 놓는 것이
+        밸런스에 좋고, 반대로 이벤트전에서는 일부러 붙여 주면 재미가 됩니다.
+    </p>
+    <h2>3. 챔피언 통계로 밴픽 힌트 얻기</h2>
+    <p>
+        내전에서 같은 상대를 반복해 만나므로, 챔피언별 전적은 곧 상대 분석 자료가 됩니다.
+        “쟤 그 챔피언만 잡으면 못 이긴다”가 데이터로 확인되면 다음 토너먼트 드래프트의 1밴이 정해집니다.
+        피어리스 밴 방식과 조합하면 챔피언 폭 데이터가 더 중요해집니다.
+    </p>
+    <h2>4. 기록 문화가 반이다</h2>
+    <p>
+        데이터 활용의 진짜 병목은 분석이 아니라 <strong>꾸준한 기록</strong>입니다.
+        경기 직후 결과를 적는 담당을 정하거나, 라이엇 계정을 등록해 자동 수집되게 해 두세요.
+        팀툴은 그룹에 등록된 계정의 사용자 지정 게임을 자동으로 긁어와 승률·듀오·챔피언 통계를 만들어 주므로,
+        “기록하는 사람” 없이도 데이터가 쌓입니다. 달력 잔디가 채워지는 재미는 덤입니다.
+    </p>
+    <div class="card">
+        읽는 순서 제안 — ① 듀오 승률에서 시너지/카운터 조합 찾기 → ② 20판 이상 쌓인 개인 승률로 티어 점수 보정
+        → ③ 챔피언 전적으로 밴픽 준비. 이 순서면 작은 표본으로도 실수 없이 써먹을 수 있습니다.
+    </div>
+
+
+    <div class="ad-slot">
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1494698073875494" data-ad-slot="6344413074" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    </div>
+
+    <div class="related">
+        <h3>함께 읽으면 좋은 글</h3>
+        <ul>
+            <li><a href="/balance-theory.html">롤 팀 밸런싱의 이론 — 티어 숫자만 보면 안 되는 이유</a></li>
+            <li><a href="/formats.html">10인 내전 대진 방식 총정리 — 단판부터 경매전까지</a></li>
+            <li><a href="/mistakes.html">내전 운영자가 자주 하는 실수 10가지</a></li>
+        </ul>
+    </div>
+
+    <a class="back" href="/">팀 빌더로 팀 짜러 가기 →</a>
+</div>
+<footer class="legal">
+    팀툴은 라이엇 게임즈(Riot Games)의 공식 제품이 아니며, 라이엇 게임즈의 보증을 받지 않았습니다.
+    리그 오브 레전드(League of Legends)와 관련 자산은 라이엇 게임즈의 상표 또는 등록 상표입니다.
+</footer>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</body>
+</html>

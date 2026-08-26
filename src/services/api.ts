@@ -143,7 +143,7 @@ export const leaveGroup = (groupId: string) =>
 
 /* --- 참가자 / 계정 --- */
 export const getRoster = (groupId: string) =>
-    client.get<{ players: GroupPlayer[]; accounts: RiotAccount[] }>(`/groups/${groupId}/players`).then(r => r.data);
+    client.get<{ players: GroupPlayer[]; accounts: RiotAccount[]; laneTiers?: LaneTierRow[] }>(`/groups/${groupId}/players`).then(r => r.data);
 export const addPlayer = (groupId: string, displayName: string) =>
     client.post(`/groups/${groupId}/players`, { displayName });
 export const removePlayer = (playerId: string) => client.delete(`/players/${playerId}`);
@@ -218,6 +218,84 @@ export interface PlayerProfile {
         maxSummonerLevel: number;
     };
 }
+
+/** 참가자×라인 티어 한 줄 */
+export interface LaneTierRow { playerId: string; position: string; tier: string }
+
+/** 팀 빌더 데이터 — 라인별 티어와 라인별 전적 (라이엇 호출 없음) */
+/** 참가자의 기본 티어 — 최고 솔랭(없으면 자랭)과 점수 가감에 쓰는 표본 */
+export interface RiotRankRow {
+    playerId: string;
+    queue: 'solo' | 'flex';
+    riotId: string | null;
+    tier: string;
+    division: string | null;
+    lp: number;
+    wins: number;
+    losses: number;
+    /** 최근 30일 게임 수 — 조회하지 못했으면 null */
+    games30d: number | null;
+}
+
+/** 나머지 인원의 기본 티어 (인원이 많으면 나눠 온다) */
+export const getRanks = (groupId: string, start: number) =>
+    client.get<{ riotRanks: RiotRankRow[]; next: number | null }>(
+        `/groups/${groupId}/ranks`, { params: { start } }).then(r => r.data);
+
+/** 시트 한 판을 그룹에 통째로 반영 (없는 이름은 참가자로 새로 만든다) */
+export const importTiers = (groupId: string, rows: unknown[], opts?: { fromSheet?: boolean }) =>
+    client.post<{ ok: boolean; added: number; updated: number }>(
+        `/groups/${groupId}/import-tiers`, { rows, fromSheet: opts?.fromSheet ?? false }).then(r => r.data);
+
+export const getBuilderData = (groupId: string) =>
+    client.get<{
+        players: unknown[];
+        laneTiers: unknown[];
+        laneStats: unknown[];
+        riotRanks?: RiotRankRow[];
+        /** 남은 인원의 시작 위치 (null이면 끝) */
+        rankNext?: number | null;
+    }>(`/groups/${groupId}/builder`).then(r => r.data);
+
+/* --- 구글 시트 연동 --- */
+
+export interface SheetLink { url: string | null; csv: string | null; error?: string }
+
+/** 연동된 시트를 지금 읽어 온다 (서버가 대신 받아 온다 — 브라우저에서 직접 부르면 CORS에 막힌다) */
+export const getSheet = (groupId: string) =>
+    client.get<SheetLink>(`/groups/${groupId}/sheet`).then(r => r.data);
+
+/** 구글 서비스 계정 상태 — 시트를 어느 이메일에 공유해야 하는지 알려 준다 */
+export const getSheetAccount = () =>
+    client.get<{ ready: boolean; email: string | null }>('/sheets/account').then(r => r.data);
+
+/** 앱 → 시트 저장 (표 전체를 덮어쓰고 티어 칸에 드롭다운을 건다) */
+export const pushSheet = (
+    groupId: string,
+    values: string[][],
+    choices: string[],
+    tiers: { label: string; color: string }[],
+) =>
+    client.post<{ ok: boolean; rows: number }>(`/groups/${groupId}/sheet/push`, { values, choices, tiers })
+        .then(r => r.data);
+
+/** 시트 연동 (url이 빈 문자열이면 해제) */
+export const setSheet = (groupId: string, url: string) =>
+    client.put<{ ok: boolean; url: string | null; csv?: string }>(`/groups/${groupId}/sheet`, { url })
+        .then(r => r.data);
+
+/** 참가자의 롤 랭크를 조회해 기본 티어로 저장 (참가자 관리의 사람별 버튼) */
+export const fetchPlayerTier = (playerId: string) =>
+    client.post<{ ok: boolean; value: string; queue: 'solo' | 'flex'; riotId: string; lp: number }>(
+        `/players/${playerId}/riot-tier`).then(r => r.data);
+
+/** 라인별 티어 지정 (tier가 null이면 해제) */
+export const setLaneTier = (playerId: string, position: string, tier: string | null) =>
+    client.put(`/players/${playerId}/lane-tiers`, { position, tier });
+
+/** 그룹 참가자들의 티어·활동량 (팀 빌더 자동 티어/점수용) */
+export const getGroupRatings = (groupId: string) =>
+    client.get<{ ratings: unknown[]; laneStats?: unknown[]; error?: string }>(`/groups/${groupId}/ratings`).then(r => r.data);
 
 export const getPlayerProfile = (playerId: string) =>
     client.get<PlayerProfile>(`/players/${playerId}/profile`).then(r => r.data);

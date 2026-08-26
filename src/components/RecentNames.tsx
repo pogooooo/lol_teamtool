@@ -15,33 +15,38 @@ export const RecentNamesList = () => {
     return (
         <Table>
             <Row className="head">
-                <span className="nm">이름</span>
+                <span className="nm">이름 <b>{recentNames.length}</b></span>
                 <span className="c">추가</span>
                 <span className="c">삭제</span>
             </Row>
-            {recentNames.map(name => {
-                const used = allPlayers.some(p => p.name === name);
-                return (
-                    <Row key={name} $used={used}>
-                        <span className="nm" title={name}>{name}</span>
-                        <button
-                            className="add"
-                            disabled={used}
-                            onClick={() => handlers.importPlayers([name])}
-                            title={used ? '이미 추가되어 있습니다' : '팀 빌더에 다시 추가'}
-                        >
-                            {used ? '사용 중' : '추가'}
-                        </button>
-                        <button
-                            className="del"
-                            onClick={() => handlers.removeRecentName(name)}
-                            title="기록에서 삭제"
-                        >
-                            ✕
-                        </button>
-                    </Row>
-                );
-            })}
+
+            {/* 기록이 길어지면 패널 전체가 늘어나므로 목록만 따로 스크롤한다 */}
+            <Body>
+                {recentNames.map(name => {
+                    const used = allPlayers.some(p => p.name === name);
+                    return (
+                        <Row key={name} $used={used}>
+                            <span className="nm" title={name}>{name}</span>
+                            <button
+                                className="add"
+                                disabled={used}
+                                onClick={() => handlers.importPlayers([name])}
+                                title={used ? '이미 추가되어 있습니다' : '팀 빌더에 다시 추가'}
+                            >
+                                {used ? '사용 중' : '추가'}
+                            </button>
+                            <button
+                                className="del"
+                                onClick={() => handlers.removeRecentName(name)}
+                                title="기록에서 삭제"
+                            >
+                                ✕
+                            </button>
+                        </Row>
+                    );
+                })}
+            </Body>
+
             <FootRow>
                 <ClearButton onClick={handlers.clearRecentNames} title="최근 이름 기록 전체 삭제">
                     전체 삭제
@@ -65,6 +70,22 @@ const Table = styled.div`
     overflow: hidden;
 `;
 
+/* 이름 줄만 스크롤 — 머리글과 '전체 삭제'는 항상 보이게 남긴다 */
+const Body = styled.div`
+    display: flex;
+    flex-direction: column;
+    max-height: 44vh;
+    /* 사이드 패널이 좁아도 대여섯 줄은 보이게 (부족하면 패널 쪽이 스크롤된다) */
+    min-height: 150px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    /* 좁은 화면에서는 입력창 아래에 붙으므로 더 낮게 */
+    @media (max-width: 1099px) {
+        max-height: 150px;
+    }
+`;
+
 const Row = styled.div<{ $used?: boolean }>`
     display: grid;
     grid-template-columns: 1fr 52px 34px;
@@ -80,6 +101,7 @@ const Row = styled.div<{ $used?: boolean }>`
 
         .nm, .c { padding: 0.28rem 0.5rem; }
         .c { text-align: center; }
+        b { color: ${({ theme }) => theme.text}; }
     }
 
     .nm {

@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,12 +24,21 @@ try {
 try {
     db.exec('ALTER TABLE auction_states ADD COLUMN rev INTEGER NOT NULL DEFAULT 0');
 } catch { /* 이미 존재 */ }
+// 마이그레이션: player_points에 배경 장식 컬럼 추가
+try {
+    db.exec('ALTER TABLE player_points ADD COLUMN bg TEXT');
+} catch { /* 이미 존재 */ }
+// 마이그레이션: groups에 연동 구글 시트 주소 추가
+try {
+    db.exec('ALTER TABLE groups ADD COLUMN sheet_url TEXT');
+} catch { /* 이미 존재 */ }
 db.exec(`
 CREATE TABLE IF NOT EXISTS groups (
     id         TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
     join_code  TEXT UNIQUE NOT NULL,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    sheet_url  TEXT
 );
 CREATE TABLE IF NOT EXISTS players (
     id           TEXT PRIMARY KEY,
@@ -73,6 +83,12 @@ CREATE TABLE IF NOT EXISTS match_participants (
     vision_score INTEGER NOT NULL DEFAULT 0,
     raw          TEXT
 );
+CREATE TABLE IF NOT EXISTS player_lane_tiers (
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    position  TEXT NOT NULL,
+    tier      TEXT NOT NULL,
+    PRIMARY KEY (player_id, position)
+);
 CREATE TABLE IF NOT EXISTS memberships (
     client_id TEXT NOT NULL,
     group_id  TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -115,6 +131,62 @@ CREATE TABLE IF NOT EXISTS player_comments (
     comment    TEXT NOT NULL,
     updated_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS player_points (
+    player_id  TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    group_id   TEXT NOT NULL,
+    points     INTEGER NOT NULL DEFAULT 0,
+    pin        TEXT,
+    title      TEXT,
+    frame      TEXT,
+    bg         TEXT,
+    updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS point_log (
+    id         TEXT PRIMARY KEY,
+    group_id   TEXT NOT NULL,
+    player_id  TEXT NOT NULL,
+    delta      INTEGER NOT NULL,
+    reason     TEXT NOT NULL,
+    balance    INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS daily_claims (
+    player_id TEXT NOT NULL,
+    kind      TEXT NOT NULL,
+    day       TEXT NOT NULL,
+    PRIMARY KEY (player_id, kind, day)
+);
+CREATE TABLE IF NOT EXISTS inventory (
+    player_id   TEXT NOT NULL,
+    item_id     TEXT NOT NULL,
+    acquired_at INTEGER NOT NULL,
+    PRIMARY KEY (player_id, item_id)
+);
+CREATE TABLE IF NOT EXISTS bet_rounds (
+    id         TEXT PRIMARY KEY,
+    group_id   TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    choices    TEXT NOT NULL,
+    status     TEXT NOT NULL DEFAULT 'open',
+    winner     TEXT,
+    creator_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bets (
+    id         TEXT PRIMARY KEY,
+    group_id   TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    player_id  TEXT NOT NULL,
+    choice     TEXT NOT NULL,
+    amount     INTEGER NOT NULL,
+    status     TEXT NOT NULL DEFAULT 'open',
+    created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS match_rewards (
+    match_id   TEXT PRIMARY KEY,
+    group_id   TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS feedback (
     id         TEXT PRIMARY KEY,
     created_at INTEGER NOT NULL,
@@ -131,7 +203,7 @@ CREATE INDEX IF NOT EXISTS idx_codes_group ON tournament_codes (group_id, create
 
 /* --- 조회 --- */
 
-const groupRow = (r) => r && ({ id: r.id, name: r.name, joinCode: r.join_code, createdAt: r.created_at });
+const groupRow = (r) => r && ({ id: r.id, name: r.name, joinCode: r.join_code, createdAt: r.created_at, sheetUrl: r.sheet_url ?? null });
 const playerRow = (r) => r && ({ id: r.id, groupId: r.group_id, displayName: r.display_name });
 const accountRow = (r) => r && ({
     id: r.id, playerId: r.player_id, gameName: r.game_name,
@@ -159,6 +231,10 @@ export const removeMembership = (clientId, groupId) => {
 
 export const getGroup = (groupId) =>
     groupRow(db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId));
+
+/** 연동 구글 시트 주소 저장 (null이면 해제) */
+export const setGroupSheet = (groupId, url) =>
+    db.prepare('UPDATE groups SET sheet_url = ? WHERE id = ?').run(url, groupId);
 
 /** 그룹 삭제 — 참가자/계정/매치/토너먼트 코드/멤버십이 FK CASCADE로 함께 삭제된다 */
 export const deleteGroup = (groupId) =>
@@ -449,6 +525,134 @@ export const setPlayerComment = (playerId, comment) =>
         INSERT INTO player_comments (player_id, comment, updated_at) VALUES (?, ?, ?)
         ON CONFLICT (player_id) DO UPDATE SET comment = excluded.comment, updated_at = excluded.updated_at
     `).run(playerId, comment, Date.now());
+
+/* --- 라인별 티어 --- */
+
+export const listLaneTiers = (groupId) =>
+    db.prepare(`
+        SELECT lt.player_id AS playerId, lt.position AS position, lt.tier AS tier
+        FROM player_lane_tiers lt
+        JOIN players p ON p.id = lt.player_id
+        WHERE p.group_id = ?
+    `).all(groupId);
+
+export const setLaneTier = (playerId, position, tier) => (tier
+    ? db.prepare(`
+        INSERT INTO player_lane_tiers (player_id, position, tier) VALUES (?, ?, ?)
+        ON CONFLICT (player_id, position) DO UPDATE SET tier = excluded.tier
+      `).run(playerId, position, tier)
+    : db.prepare('DELETE FROM player_lane_tiers WHERE player_id = ? AND position = ?').run(playerId, position));
+
+/** 그룹의 내전 전적을 참가자×라인으로 집계 (functions/_lib/db.js와 동일) */
+export const listLaneStats = (groupId) =>
+    db.prepare(`
+        SELECT mp.player_id AS playerId, mp.position AS position,
+               COUNT(*) AS games,
+               SUM(CASE WHEN mp.side = m.winning_side THEN 1 ELSE 0 END) AS wins
+        FROM match_participants mp
+        JOIN matches m ON m.id = mp.match_id
+        WHERE m.group_id = ? AND mp.player_id IS NOT NULL
+        GROUP BY mp.player_id, mp.position
+    `).all(groupId);
+
+/* --- 포인트 (functions/_lib/db.js와 동일 규칙) --- */
+
+export const ensurePoints = (groupId, playerId) => {
+    db.prepare('INSERT OR IGNORE INTO player_points (player_id, group_id, points, updated_at) VALUES (?, ?, 0, ?)')
+        .run(playerId, groupId, Date.now());
+    return db.prepare('SELECT * FROM player_points WHERE player_id = ?').get(playerId);
+};
+
+export const getPoints = (playerId) =>
+    db.prepare('SELECT * FROM player_points WHERE player_id = ?').get(playerId);
+
+export const addPoints = (groupId, playerId, delta, reason) => {
+    const need = delta < 0 ? -delta : 0;
+    const res = db.prepare('UPDATE player_points SET points = points + ?, updated_at = ? WHERE player_id = ? AND points >= ?')
+        .run(delta, Date.now(), playerId, need);
+    if (res.changes === 0) return null;
+    const balance = db.prepare('SELECT points FROM player_points WHERE player_id = ?').get(playerId)?.points ?? 0;
+    db.prepare('INSERT INTO point_log (id, group_id, player_id, delta, reason, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(randomUUID(), groupId, playerId, delta, reason, balance, Date.now());
+    return balance;
+};
+
+export const listGroupPoints = (groupId) =>
+    db.prepare(`
+        SELECT pp.player_id AS playerId, p.display_name AS displayName,
+               pp.points AS points, pp.title AS title, pp.frame AS frame, pp.bg AS bg,
+               CASE WHEN pp.pin IS NULL THEN 0 ELSE 1 END AS hasPin
+        FROM player_points pp JOIN players p ON p.id = pp.player_id
+        WHERE pp.group_id = ? ORDER BY pp.points DESC, p.display_name
+    `).all(groupId);
+
+export const listPointLog = (playerId, limit = 20) =>
+    db.prepare('SELECT delta, reason, balance, created_at AS createdAt FROM point_log WHERE player_id = ? ORDER BY created_at DESC LIMIT ?')
+        .all(playerId, limit);
+
+export const claimDaily = (playerId, kind, day) =>
+    db.prepare('INSERT OR IGNORE INTO daily_claims (player_id, kind, day) VALUES (?, ?, ?)')
+        .run(playerId, kind, day).changes > 0;
+
+export const checkinStreak = (playerId) =>
+    db.prepare("SELECT day FROM daily_claims WHERE player_id = ? AND kind = 'checkin' ORDER BY day DESC LIMIT 14")
+        .all(playerId).map(r => r.day);
+
+export const setPin = (playerId, pin) =>
+    db.prepare('UPDATE player_points SET pin = ?, updated_at = ? WHERE player_id = ?').run(pin, Date.now(), playerId);
+
+export const listInventory = (playerId) =>
+    db.prepare('SELECT item_id AS itemId FROM inventory WHERE player_id = ?').all(playerId).map(r => r.itemId);
+
+export const addInventory = (playerId, itemId) =>
+    db.prepare('INSERT OR IGNORE INTO inventory (player_id, item_id, acquired_at) VALUES (?, ?, ?)')
+        .run(playerId, itemId, Date.now()).changes > 0;
+
+export const equipItem = (playerId, kind, itemId) => {
+    const col = kind === 'title' ? 'title' : kind === 'bg' ? 'bg' : 'frame';
+    return db.prepare(`UPDATE player_points SET ${col} = ?, updated_at = ? WHERE player_id = ?`)
+        .run(itemId, Date.now(), playerId);
+};
+
+export const addBetRound = ({ id, groupId, title, choices, creatorId }) =>
+    db.prepare('INSERT INTO bet_rounds (id, group_id, title, choices, status, creator_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(id, groupId, title, JSON.stringify(choices), 'open', creatorId, Date.now());
+
+export const getBetRound = (roundId) =>
+    db.prepare('SELECT * FROM bet_rounds WHERE id = ?').get(roundId);
+
+export const listBetRounds = (groupId, limit = 8) =>
+    db.prepare(`
+        SELECT br.*, p.display_name AS creatorName
+        FROM bet_rounds br LEFT JOIN players p ON p.id = br.creator_id
+        WHERE br.group_id = ?
+        ORDER BY (br.status IN ('open','locked')) DESC, br.created_at DESC
+        LIMIT ?
+    `).all(groupId, limit);
+
+export const setBetRoundStatus = (roundId, status, winner = null) =>
+    db.prepare('UPDATE bet_rounds SET status = ?, winner = ? WHERE id = ?').run(status, winner, roundId);
+
+export const addBet = ({ id, groupId, subject, playerId, choice, amount }) =>
+    db.prepare('INSERT INTO bets (id, group_id, subject, player_id, choice, amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(id, groupId, subject, playerId, choice, amount, 'open', Date.now());
+
+export const listBets = (groupId, subject) =>
+    db.prepare(`
+        SELECT b.id, b.player_id AS playerId, p.display_name AS displayName, b.choice, b.amount, b.status
+        FROM bets b LEFT JOIN players p ON p.id = b.player_id
+        WHERE b.group_id = ? AND b.subject = ? ORDER BY b.created_at
+    `).all(groupId, subject);
+
+export const openBetsOf = (groupId, subject) =>
+    db.prepare("SELECT * FROM bets WHERE group_id = ? AND subject = ? AND status = 'open'").all(groupId, subject);
+
+export const markBet = (betId, status) =>
+    db.prepare('UPDATE bets SET status = ? WHERE id = ?').run(status, betId);
+
+export const claimMatchReward = (groupId, matchId) =>
+    db.prepare('INSERT OR IGNORE INTO match_rewards (match_id, group_id, created_at) VALUES (?, ?, ?)')
+        .run(matchId, groupId, Date.now()).changes > 0;
 
 /* --- 문의/건의 --- */
 

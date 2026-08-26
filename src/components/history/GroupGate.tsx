@@ -53,7 +53,7 @@ export const GroupGate = ({ archive }: { archive: Archive }) => {
                     <h3>새 그룹 만들기</h3>
                     <p>내전을 함께하는 모임 단위로 기록이 분리됩니다.</p>
                     <TextField
-                        placeholder="그룹 이름 (예: 금요 내전팟)"
+                        placeholder="그룹 이름 (예: 금요 팀툴)"
                         value={name}
                         onChange={e => setName(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
